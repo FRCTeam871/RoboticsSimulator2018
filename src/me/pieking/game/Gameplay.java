@@ -10,7 +10,8 @@ import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.List;
 
-import me.pieking.game.Gameplay.GameState;
+import org.dyn4j.dynamics.Body;
+
 import me.pieking.game.gfx.Fonts;
 import me.pieking.game.gfx.Render;
 import me.pieking.game.menu.SelectScriptMenu;
@@ -19,7 +20,7 @@ import me.pieking.game.scripting.LuaScript;
 import me.pieking.game.sound.Sound;
 import me.pieking.game.sound.SoundClip;
 import me.pieking.game.world.Balance.Team;
-import me.pieking.game.world.GameWorld;
+import me.pieking.game.world.GameObject;
 import me.pieking.game.world.Player;
 import me.pieking.game.world.PowerCube;
 
@@ -46,10 +47,11 @@ public class Gameplay {
 		blueSpawns[2] = new Point2D.Double(54.6, 20);
 	}
 
-	public List<Player> redPlayers = new ArrayList<Player>();
-	public List<Player> bluePlayers = new ArrayList<Player>();
+	private List<Player> redPlayers = new ArrayList<Player>();
+	private List<Player> bluePlayers = new ArrayList<Player>();
 
-	public List<Player> voted = new ArrayList<Player>();
+	private List<Player> voted = new ArrayList<Player>();
+	private List<Player> crossedAutoLine = new ArrayList<Player>();
 	
 	private int gameTime = ((2 * 60) + 30) * 60;
 	
@@ -90,11 +92,19 @@ public class Gameplay {
 			case AUTON:
 				if(gameTime <= 0){
 					setState(GameState.TELEOP);
+				}else{
+					for(Player p : Game.getWorld().getPlayers()) {
+						if(crossedAutoLine.contains(p)) continue;
+						if(p.base.isInContact(Game.getWorld().getAutoLine())) {
+							crossedAutoLine.add(p);
+							Game.getWorld().getProperties(p.team).addScore(5);
+						}
+					}
 				}
 				break;
 			case TELEOP:
 				if(gameTime <= 0){
-					setState(GameState.MATCH_END);
+//					setState(GameState.MATCH_END);
 				}
 				
 				if(gameTime == 30 * 60) {
@@ -242,17 +252,17 @@ public class Gameplay {
 		
     		g.setFont(Fonts.pixelmix.deriveFont(20f));
     		
-    		if(Game.getWorld().power_boost != Team.NONE){
-    			g.setColor(Game.getWorld().power_boost.color);
-    			String s = "boost (" + (Game.getWorld().power_boost_timer / 60) + ")";
-    			if(Game.getWorld().power_boost_queued != Team.NONE) s += " (" + Game.getWorld().power_boost_queued + " queued)";
+    		if(Game.getWorld().getBoost().getUsing() != Team.NONE){
+    			g.setColor(Game.getWorld().getBoost().getUsing().color);
+    			String s = "boost (" + (Game.getWorld().getBoost().getTimer() / 60) + ")";
+    			if(Game.getWorld().getBoost().getQueued() != Team.NONE) s += " (" + Game.getWorld().getBoost().getQueued() + " queued)";
     			g.drawString(s, 10, Game.getHeight() - 20);
     		}
     		
-    		if(Game.getWorld().power_force != Team.NONE){
-    			g.setColor(Game.getWorld().power_force.color);
-    			String s = "force (" + (Game.getWorld().power_force_timer / 60) + ")";
-    			if(Game.getWorld().power_force_queued != Team.NONE) s += " (" + Game.getWorld().power_force_queued + " queued)";
+    		if(Game.getWorld().getForce().getUsing() != Team.NONE){
+    			g.setColor(Game.getWorld().getForce().getUsing().color);
+    			String s = "force (" + (Game.getWorld().getForce().getTimer() / 60) + ")";
+    			if(Game.getWorld().getForce().getQueued() != Team.NONE) s += " (" + Game.getWorld().getForce().getQueued() + " queued)";
     			g.drawString(s, 10, Game.getHeight() - 40);
     		}
     

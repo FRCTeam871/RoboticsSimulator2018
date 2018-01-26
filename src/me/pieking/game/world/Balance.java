@@ -78,15 +78,15 @@ public class Balance {
 			blue.strip.setMode(StripMode.PULSE_BLUE);
 		}
 		
-		if(Game.getWorld().power_boost == Team.RED){
+		if(Game.getWorld().getBoost().getUsing() == Team.RED){
 			red.strip.setMode(StripMode.CHASE_RED);
-		}else if(Game.getWorld().power_boost == Team.BLUE){
+		}else if(Game.getWorld().getBoost().getUsing() == Team.BLUE){
 			blue.strip.setMode(StripMode.CHASE_BLUE);
 		}
 		
-		if(Game.getWorld().power_force == Team.RED){
+		if(Game.getWorld().getForce().getUsing() == Team.RED){
 			red.strip.setMode(StripMode.PULSE_RED_BLUE_CORNERS);
-		}else if(Game.getWorld().power_force == Team.BLUE){
+		}else if(Game.getWorld().getForce().getUsing() == Team.BLUE){
 			blue.strip.setMode(StripMode.PULSE_BLUE_RED_CORNERS);
 		}
 		

@@ -35,7 +35,7 @@ public abstract class Menu {
 		g.fillRect(0, 0, Game.getWidth(), Game.getHeight());
 		render(g);
 		
-		Vars.showCollision = true;
+//		Vars.showCollision = true;
 		
 		if(Vars.showCollision && isFocused()){
     		for(EButton b : buttons){

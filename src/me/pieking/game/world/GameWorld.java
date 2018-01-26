@@ -1,13 +1,9 @@
 package me.pieking.game.world;
 
-import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Graphics2D;
-import java.awt.Shape;
-import java.awt.font.GlyphVector;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Point2D;
-import java.awt.geom.Point2D.Double;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -20,12 +16,11 @@ import org.dyn4j.geometry.Triangle;
 import org.dyn4j.geometry.Vector2;
 
 import me.pieking.game.Game;
-import me.pieking.game.Gameplay;
+import me.pieking.game.Gameplay.GameState;
 import me.pieking.game.Rand;
 import me.pieking.game.Scheduler;
 import me.pieking.game.Vars;
-import me.pieking.game.Gameplay.GameState;
-import me.pieking.game.gfx.Fonts;
+import me.pieking.game.Vault;
 import me.pieking.game.gfx.Images;
 import me.pieking.game.gfx.LEDStrip;
 import me.pieking.game.gfx.Sprite;
@@ -59,6 +54,7 @@ public class GameWorld {
 	private List<PowerCube> exchanging = new ArrayList<PowerCube>();
 	private List<ScalePlatform> scalePlatforms = new ArrayList<ScalePlatform>();
 	private List<Balance> scales = new ArrayList<Balance>();
+	private GameObject autoLineColl;
 	private Scale scale;
 	
 	private double fieldXofs = 28.1;
@@ -70,21 +66,10 @@ public class GameWorld {
 	
 	//TODO: move power up properties to their own class
 	
-	public Team power_boost = Team.NONE;
-	public Team power_boost_queued = Team.NONE;
-	public List<Team> power_boost_used = new ArrayList<>();
-	public int power_boost_timer = 0;
-	public int power_boost_level = 0;
-	public int power_boost_level_red = 0;
-	public int power_boost_level_blue = 0;
+	private PowerUp boost = new PowerUp();
+	private PowerUp force = new PowerUp();
+	private PowerUp levitate = new PowerUp();
 	
-	public Team power_force = Team.NONE;
-	public Team power_force_queued = Team.NONE;
-	public List<Team> power_force_used = new ArrayList<>();
-	public int power_force_timer = 0;
-	public int power_force_level = 0;
-	public int power_force_level_red = 0;
-	public int power_force_level_blue = 0;
 	
 	private boolean cameraCentered = false;
 	
@@ -242,6 +227,15 @@ public class GameWorld {
 		slopeBR.addFixture(tbf4);
 		getWorld().addBody(slopeBR);
 		walls.add(slopeBR);
+		
+		
+		autoLineColl = new GameObject();
+		Rectangle aRect = new Rectangle(29.15, 50);
+		aRect.translate(32.38, 0);
+		BodyFixture aBf = new BodyFixture(aRect);
+		aBf.setSensor(true);
+		autoLineColl.addFixture(aBf);
+		getWorld().addBody(autoLineColl);
 
 		// place power cubes on the field
 		
@@ -528,90 +522,89 @@ public class GameWorld {
 		// power ups
 		
 		if(Game.gameplay.getState() == GameState.AUTON || Game.gameplay.getState() == GameState.TELEOP) {
-    		if(power_boost_timer > 0){
-    			if(power_boost_level % 2 == 0){ // 0 or 2
-        			if(power_boost == Team.RED) getProperties(Team.RED).setSwitchScoreMod(2);
-        			if(power_boost == Team.BLUE) getProperties(Team.BLUE).setSwitchScoreMod(2);
+    		if(boost.getTimer() > 0){
+    			if(boost.getLevel() % 2 == 0){ // 0 or 2
+        			if(boost.getUsing() == Team.RED) getProperties(Team.RED).setSwitchScoreMod(2);
+        			if(boost.getUsing() == Team.BLUE) getProperties(Team.BLUE).setSwitchScoreMod(2);
     			}
     			
-    			if(power_boost_level >= 1){ // 1 or 2
-    				if(power_boost == Team.RED) getProperties(Team.RED).setScaleScoreMod(2);
-        			if(power_boost == Team.BLUE) getProperties(Team.BLUE).setScaleScoreMod(2);
+    			if(boost.getLevel() >= 1){ // 1 or 2
+    				if(boost.getUsing() == Team.RED) getProperties(Team.RED).setScaleScoreMod(2);
+        			if(boost.getUsing() == Team.BLUE) getProperties(Team.BLUE).setScaleScoreMod(2);
     			}
     			
-    			power_boost_timer--;
-    			if(power_boost_timer == 0){
+    			boost.setTimer(boost.getTimer() - 1);
+    			if(boost.getTimer() == 0){
     				getProperties(Team.RED).setSwitchScoreMod(2);
     				getProperties(Team.RED).setScaleScoreMod(2);
     				getProperties(Team.BLUE).setSwitchScoreMod(2);
     				getProperties(Team.BLUE).setScaleScoreMod(2);
     				
-    				power_boost = Team.NONE;
-    				if(power_boost_queued != Team.NONE){
-    					forceBoost(power_boost_queued);
-    					power_boost_queued = Team.NONE;
+    				boost.setUsing(Team.NONE);
+    				if(boost.getUsing() != Team.NONE){
+    					forceBoost(boost.getQueued());
+    					boost.setQueued(Team.NONE);
     				}
     			}
     		}
     		
-    		if(power_force_timer > 0){
-    			if(power_force_level % 2 == 0){ // 0 or 2
-    				if(power_force == Team.RED) getSwitch(Team.RED).setOwnerOverride(Team.RED);
-    				if(power_force == Team.BLUE) getSwitch(Team.BLUE).setOwnerOverride(Team.BLUE);
+    		if(force.getTimer() > 0){
+    			if(force.getLevel() % 2 == 0){ // 0 or 2
+    				if(force.getUsing() == Team.RED) getSwitch(Team.RED).setOwnerOverride(Team.RED);
+    				if(force.getUsing() == Team.BLUE) getSwitch(Team.BLUE).setOwnerOverride(Team.BLUE);
     			}
     			
-    			if(power_force_level >= 1){ // 1 or 2
-    				scale.setOwnerOverride(power_force);
+    			if(force.getLevel() >= 1){ // 1 or 2
+    				scale.setOwnerOverride(force.getUsing());
     			}
     			
-    			power_force_timer--;
-    			if(power_force_timer == 0){
-    				power_force = Team.NONE;
+    			force.setTimer(force.getTimer() - 1);
+    			if(force.getTimer() == 0){
+    				force.setUsing(Team.NONE);
     				
     				getSwitch(Team.RED).setOwnerOverride(Team.NONE);
     				getSwitch(Team.BLUE).setOwnerOverride(Team.NONE);
     				scale.setOwnerOverride(Team.NONE);
     				
-    				if(power_force_queued != Team.NONE){
-    					forceForce(power_force_queued);
-    					power_force_queued = Team.NONE;
+    				if(force.getQueued() != Team.NONE){
+    					forceForce(force.getQueued());
+    					force.setQueued(Team.NONE);
     				}
     			}
     		}
 
-		}
-		// if a power cube is in a team's exchange, increment their cube storage, add some velocity as a fun little animation, and destroy the physical cube after a bit
-		List<PowerCube> cub = new ArrayList<PowerCube>();
-		cub.addAll(cubes);
-		for(PowerCube c : cub){
-			if(exchanging .contains(c)) continue;
-			for(Team team : getPlayingTeams()){
-				if(getExchangeSensor(team) != null && getExchangeSensor(team).contains(c.base.getWorldCenter())){
-					getProperties(team).addCubeStorage(1);
-					exchanging.add(c);
-					c.base.setLinearVelocity(team == Team.RED ? -40 : 40, 0); // red's exchange is facing left while blue's is facing right
-					Scheduler.delayedTask(() -> {
-						removeCube(c);
-					}, 30);
-				}
-			}
-		}
-		
-		// update the scores for the switches and scale every second (once every 60 ticks)
-		if(Game.getTime() % 60 == 0){
-			for(Team team : getPlayingTeams()){
-				if(getSwitch(team).getOwner() == team){
-					TeamProperties tp = getProperties(team);
-					tp.addScore(tp.getSwitchScoreMod());
-	    		}
-			}
+    		// if a power cube is in a team's exchange, increment their cube storage, add some velocity as a fun little animation, and destroy the physical cube after a bit
+    		List<PowerCube> cub = new ArrayList<PowerCube>();
+    		cub.addAll(cubes);
+    		for(PowerCube c : cub){
+    			if(exchanging .contains(c)) continue;
+    			for(Team team : getPlayingTeams()){
+    				if(getExchangeSensor(team) != null && getExchangeSensor(team).contains(c.base.getWorldCenter())){
+    					getProperties(team).addCubeStorage(1);
+    					exchanging.add(c);
+    					c.base.setLinearVelocity(team == Team.RED ? -40 : 40, 0); // red's exchange is facing left while blue's is facing right
+    					Scheduler.delayedTask(() -> {
+    						removeCube(c);
+    					}, 30);
+    				}
+    			}
+    		}
     		
-			if(scale.getOwner() != Team.NONE){
-    			TeamProperties tp = getProperties(scale.getOwner());
-    			tp.addScore(tp.getScaleScoreMod());
-			}
+    		// update the scores for the switches and scale every second (once every 60 ticks)
+    		if(Game.getTime() % 60 == 0){
+    			for(Team team : getPlayingTeams()){
+    				if(getSwitch(team).getOwner() == team){
+    					TeamProperties tp = getProperties(team);
+    					tp.addScore(tp.getSwitchScoreMod());
+    	    		}
+    			}
+        		
+    			if(scale.getOwner() != Team.NONE){
+        			TeamProperties tp = getProperties(scale.getOwner());
+        			tp.addScore(tp.getScaleScoreMod());
+    			}
+    		}
 		}
-		
 		// update the players
 		for(Player p : players){
 			if(p != null) p.tick();
@@ -821,14 +814,14 @@ public class GameWorld {
 	 * <code>false</code> otherwise.
 	 */
 	public boolean useBoost(Team team){
-		if(power_force == team) return false;
-		System.out.println("boost " + power_boost_used.contains(team));
-		if(power_boost_used.contains(team)) return false;
+		if(force.getUsing() == team) return false;
+//		System.out.println("boost " + power_boost_used.contains(team));
+		if(boost.getUsed().contains(team)) return false;
 		
-		power_boost_used.add(team);
+		boost.addUsed(team);
 		
-		if(power_boost != Team.NONE) {
-			power_boost_queued = team;
+		if(boost.getUsing() != Team.NONE) {
+			boost.setQueued(team);
 			return true;
 		}
 		
@@ -843,11 +836,10 @@ public class GameWorld {
 	 * @param team - the {@link Team} who will use boost.
 	 */
 	public void forceBoost(Team team){
-		power_boost = team;
-		power_boost_timer = 60 * BOOST_TIME;
+		boost.setUsing(team);
+		boost.setTimer(60 * BOOST_TIME);
 		
-		if(team == Team.RED) power_boost_level = power_boost_level_red;
-		if(team == Team.BLUE) power_boost_level = power_boost_level_blue;
+		boost.setLevel(getProperties(team).getBoostLevel());
 	}
 	
 	/**
@@ -857,13 +849,13 @@ public class GameWorld {
 	 * <code>false</code> otherwise.
 	 */
 	public boolean useForce(Team team){
-		if(power_boost == team) return false;
-		if(power_force_used.contains(team)) return false;
+		if(boost.getUsing() == team) return false;
+		if(force.getUsed().contains(team)) return false;
 		
-		power_force_used.add(team);
+		force.addUsed(team);
 		
-		if(power_force != Team.NONE) {
-			power_force_queued = team;
+		if(force.getUsing() != Team.NONE) {
+			force.setQueued(team);
 			return true;
 		}
 		
@@ -878,11 +870,10 @@ public class GameWorld {
 	 * @param team - the {@link Team} who will use force.
 	 */
 	public void forceForce(Team team){
-		power_force = team;
-		power_force_timer = 60 * BOOST_TIME;
+		force.setUsing(team);
+		force.setTimer(60 * BOOST_TIME);
 		
-		if(team == Team.RED) power_force_level = power_force_level_red;
-		if(team == Team.BLUE) power_force_level = power_force_level_blue;
+		force.setLevel(getProperties(team).getForceLevel());
 	}
 	
 	/**
@@ -901,19 +892,8 @@ public class GameWorld {
 	 * Resets all power ups to the starting configuration.
 	 */
 	public void resetPowerups(){
-		power_boost = Team.NONE;
-		power_boost_queued = Team.NONE;
-		power_boost_timer = 0;
-		power_boost_level_red = 0;
-		power_boost_level_blue = 0;
-		power_boost_used.clear();
-		
-		power_force = Team.NONE;
-		power_force_queued = Team.NONE;
-		power_force_timer = 0;
-		power_force_level_red = 0;
-		power_force_level_blue = 0;
-		power_force_used.clear();
+		boost.reset();
+		force.reset();
 		
 		for(Team t : getPlayingTeams()){
 			getProperties(t).setUsedLevitate(false);
@@ -1114,4 +1094,21 @@ public class GameWorld {
 		return scale;
 	}
 
+	public Body getAutoLine() {
+		return autoLineColl;
+	}
+
+	public PowerUp getBoost() {
+		return boost;
+	}
+
+	public PowerUp getForce() {
+		return force;
+	}
+
+	public Vault getVault() {
+		return vault;
+	}
+	
+	
 }

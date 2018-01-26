@@ -117,28 +117,6 @@ public class LuaLibShip extends TwoArgFunction {
 		}
 	}
 	
-	static class getPlateColors extends ZeroArgFunction {
-		public LuaValue call() {
-
-			String data = "";
-			
-			Team rTeam = Game.getWorld().getPlayer(getRobot()).team;
-			TeamProperties tp = Game.getWorld().getProperties(rTeam);
-			TeamProperties tpOther = Game.getWorld().getProperties(rTeam.getOpposite());
-			
-			Team top = tp.getSwitch().getTopTeam();
-			if(rTeam == top) data += "R";
-			
-			top = Game.getWorld().getScale().getTopTeam();
-			if(rTeam == top) data += "R";
-			
-			top = tpOther.getSwitch().getTopTeam();
-			if(rTeam == top) data += "R";
-			
-			return valueOf(data);
-		}
-	}
-	
 	static class getComponent extends TwoArgFunction {
 		public LuaValue call(LuaValue x, LuaValue y) {
 			return makeComponent(getRobot().getComponent(new Point(x.checkint(), y.checkint())));

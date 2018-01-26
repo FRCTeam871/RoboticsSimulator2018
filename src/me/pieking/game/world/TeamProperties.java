@@ -10,6 +10,8 @@ public class TeamProperties {
 	private int switchScoreMod = 1;
 	private int scaleScoreMod = 1;
 	private int score = 0;
+	private int boostLevel = 0;
+	private int forceLevel = 0;
 	private boolean usedLevitate = false;
 
 	public TeamProperties(Switch teamSwitch, GameObject exchangeSensor) {
@@ -94,5 +96,21 @@ public class TeamProperties {
 
 	public void setUsedLevitate(boolean usedLevitate) {
 		this.usedLevitate = usedLevitate;
+	}
+
+	public int getBoostLevel() {
+		return boostLevel;
+	}
+
+	public void setBoostLevel(int boostLevel) {
+		this.boostLevel = boostLevel;
+	}
+
+	public int getForceLevel() {
+		return forceLevel;
+	}
+
+	public void setForceLevel(int forceLevel) {
+		this.forceLevel = forceLevel;
 	}
 }

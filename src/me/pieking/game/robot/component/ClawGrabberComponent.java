@@ -36,6 +36,8 @@ public class ClawGrabberComponent extends ActivatableComponent {
 	
 	double holdingAngle;
 	
+	boolean setCube = true;
+	
 	public ClawGrabberComponent(int x, int y, int rot) {
 		super(x, y, 2, 1, rot, 100);
 		sprite = sprOff;
@@ -79,6 +81,11 @@ public class ClawGrabberComponent extends ActivatableComponent {
 	@Override
 	public void tick(Player pl) {
 		super.tick(pl);
+		
+//		if(setCube) {
+//			setHasCube(true);
+//			setCube = false;
+//		}
 		
 		if(activated){
 			

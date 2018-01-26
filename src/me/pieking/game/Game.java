@@ -7,6 +7,7 @@ import java.awt.event.WindowListener;
 import java.io.IOException;
 import java.util.List;
 
+import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
@@ -29,6 +30,7 @@ import me.pieking.game.world.Balance.Team;
 import me.pieking.game.world.GameObject;
 import me.pieking.game.world.GameWorld;
 import me.pieking.game.world.Player;
+import me.pieking.game.world.PowerCube;
 
 public class Game {
 
@@ -154,6 +156,9 @@ public class Game {
 		jp.setPreferredSize(new Dimension(WIDTH, HEIGHT));
 		frame.add(jp);
 		frame.pack();
+		
+		
+		frame.setIconImage(PowerCube.spr.getImage());
 		
 		jp.setVisible(false);
 		
