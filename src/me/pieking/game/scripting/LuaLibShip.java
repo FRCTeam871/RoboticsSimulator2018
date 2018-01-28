@@ -199,6 +199,9 @@ public class LuaLibShip extends TwoArgFunction {
 			
 			for(int i = 0; i < vals.length; i++){
 				vals[i] = makeComponent(matched.get(i));
+				for(LuaValue v : vals[i].checktable().keys()) {
+					System.out.println(v.toString() + " : " + vals[i].checktable().get(v));
+				}
 			}
 			
 			return listOf(vals);

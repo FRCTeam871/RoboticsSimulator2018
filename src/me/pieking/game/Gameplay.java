@@ -4,6 +4,7 @@ import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Shape;
+import java.awt.event.KeyEvent;
 import java.awt.font.GlyphVector;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Point2D;
@@ -68,6 +69,10 @@ public class Gameplay {
 //					setState(GameState.SETUP);
 //				}
 				
+				if(Game.controllerState().aJustPressed) {
+					voteToStart(Game.getWorld().getSelfPlayer());
+				}
+				
 				int numVoted = 0;
 				List<Player> vote = new ArrayList<Player>();
 				vote.addAll(voted);
@@ -103,8 +108,9 @@ public class Gameplay {
 				}
 				break;
 			case TELEOP:
+				if(Game.keyHandler().isPressed(KeyEvent.VK_F9)) setState(GameState.MATCH_END);
 				if(gameTime <= 0){
-//					setState(GameState.MATCH_END);
+					setState(GameState.MATCH_END);
 				}
 				
 				if(gameTime == 30 * 60) {
@@ -194,7 +200,7 @@ public class Gameplay {
 			
 			g.setFont(Fonts.pixelmix.deriveFont(16f));
 			g.setColor(new Color(170, 120, 0));
-			String msg3 = "Press [V] to vote for force start.";
+			String msg3 = "Press " + (Game.controllerState().isConnected ? "(A)" : "[V]") + " to vote for force start.";
 			g.drawString(msg3, Game.getWidth()/2 - g.getFontMetrics().stringWidth(msg3)/2, Game.getHeight()/2 + 80);
 			String msg4 = "" + numVoted + " of " + (int)Math.ceil(Game.getWorld().getPlayers().size() / 2d) + " needed.";
 			g.drawString(msg4, Game.getWidth()/2 - g.getFontMetrics().stringWidth(msg4)/2, Game.getHeight()/2 + 100);
@@ -319,16 +325,10 @@ public class Gameplay {
     		g.setColor(Team.BLUE.color);
     		g.drawString("" + blueScore, Game.getWidth()/2 + (colonWidth), scoreBoardY);
     		
-    		
-    		// power cube storage
-    		
-    		g.drawImage(PowerCube.spr.getImage(), Game.getWidth() - 80, Game.getHeight() - 80, 60, 60, null);
-    		int numCubes = Game.getWorld().getProperties(Game.getWorld().getSelfPlayer().team).getCubeStorage();
-    		g.setFont(Fonts.pixeled.deriveFont(14f));
-    		g.setColor(Color.DARK_GRAY);
-    		g.drawString("" + numCubes, Game.getWidth() - 80 + 53, Game.getHeight() - 80 + 65);
-    		g.setColor(Color.WHITE);
-    		g.drawString("" + numCubes, Game.getWidth() - 80 + 55, Game.getHeight() - 80 + 67);
+		}
+		
+		if(Game.gameplay.getState() == GameState.TELEOP) {
+			Game.getWorld().getProperties(Game.getWorld().getSelfPlayer().team).getVault().render(g);
 		}
 		
 		g.setFont(Fonts.pixeled.deriveFont(16f));
@@ -401,6 +401,10 @@ public class Gameplay {
 				
 				break;
 			case AUTON:
+				Game.getWorld().getProperties(Team.RED).setScaleScoreMod(2);
+				Game.getWorld().getProperties(Team.RED).setSwitchScoreMod(2);
+				Game.getWorld().getProperties(Team.BLUE).setScaleScoreMod(2);
+				Game.getWorld().getProperties(Team.BLUE).setSwitchScoreMod(2);
 				gameTime = 15 * 60; // 15s
 				Robot.setAllEnabled(false);
 				LuaScript ls = Game.getWorld().getSelfPlayer().getRobot().getAutonScript();
@@ -411,6 +415,11 @@ public class Gameplay {
 				
 				break;
 			case TELEOP:
+				Game.getWorld().getProperties(Team.RED).setCubeStorage(14);
+				Game.getWorld().getProperties(Team.RED).setScaleScoreMod(1);
+				Game.getWorld().getProperties(Team.RED).setSwitchScoreMod(1);
+				Game.getWorld().getProperties(Team.BLUE).setScaleScoreMod(1);
+				Game.getWorld().getProperties(Team.BLUE).setSwitchScoreMod(1);
 				gameTime = 135 * 60; // 2m 15s
 				Robot.setAllEnabled(true);
 				LuaScript ls2 = Game.getWorld().getSelfPlayer().getRobot().getAutonScript();
@@ -422,6 +431,12 @@ public class Gameplay {
 			case MATCH_END:
 				gameTime = 10 * 60; // 2m 15s
 				Robot.setAllEnabled(false);
+				
+				for(Player p : Game.getWorld().getPlayers()) {
+					if(p.base.isInContact(Game.getWorld().getPlatform(p.team))) {
+						Game.getWorld().getProperties(p.team).addScore(5);
+					}
+				}
 				
 				s_matchEnd.stop();
 				s_matchEnd.start();

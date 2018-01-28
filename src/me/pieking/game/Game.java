@@ -1,5 +1,6 @@
 package me.pieking.game;
 
+import java.awt.AWTException;
 import java.awt.Dimension;
 import java.awt.Point;
 import java.awt.event.WindowEvent;
@@ -7,9 +8,12 @@ import java.awt.event.WindowListener;
 import java.io.IOException;
 import java.util.List;
 
-import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
+
+import com.studiohartman.jamepad.ControllerManager;
+import com.studiohartman.jamepad.ControllerState;
+import com.studiohartman.jamepad.ControllerUnpluggedException;
 
 import me.pieking.game.events.KeyHandler;
 import me.pieking.game.events.MouseHandler;
@@ -72,6 +76,9 @@ public class Game {
 	/** The active world. */
 	private static GameWorld gw;
 	public static Gameplay gameplay;
+	
+	private static ControllerManager controllerManager;
+	private static ControllerState state;
 	
 	/**
 	 * Run the game with arguments
@@ -146,6 +153,12 @@ public class Game {
 	 */
 	private static void init(){
 		
+		if(controllerManager == null) {
+    		controllerManager = new ControllerManager();
+    		controllerManager.initSDLGamepad();
+    		state = controllerManager.getState(0);
+		}
+		
 //		try {
 //			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
 //		} catch (Exception e) {}
@@ -214,7 +227,7 @@ public class Game {
 		gw = new GameWorld();
 		gameplay = new Gameplay();
 		
-		while(!ClientStarter.hasEnteredIp){
+		while(!ClientStarter.hasEnteredIp && !isServer()){
 			try {
 				Thread.sleep(100);
 			}catch (InterruptedException e1) {
@@ -259,6 +272,8 @@ public class Game {
 	private static void tick(){
 		
 		frame.setTitle(NAME + (isServer() ? " (Server) " : "") + " v" + VERSION + " | " + fps + " FPS " + tps + " TPS");
+		
+		state = controllerManager.getState(0);
 		
 		try{
 			gameplay.tick();
@@ -403,5 +418,22 @@ public class Game {
 	public static boolean debug() {
 		return false;
 	}
+	
+	public static ControllerState controllerState() {
+		if(controllerManager == null) {
+			return null;
+		}
+		
+		return state;
+	}
+	
+	public static void setVibration(float r, float l) {
+		try {
+			controllerManager.getControllerIndex(0).startVibration(l, r);
+		} catch (ControllerUnpluggedException e) {
+			e.printStackTrace();
+		}
+	}
+	
 	
 }

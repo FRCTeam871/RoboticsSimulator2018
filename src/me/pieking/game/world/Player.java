@@ -1,5 +1,6 @@
 package me.pieking.game.world;
 
+import java.awt.AWTException;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -35,6 +36,8 @@ import org.dyn4j.geometry.Circle;
 import org.dyn4j.geometry.Mass;
 import org.dyn4j.geometry.MassType;
 import org.dyn4j.geometry.Vector2;
+
+import com.studiohartman.jamepad.ControllerState;
 
 import me.pieking.game.FileSystem;
 import me.pieking.game.Game;
@@ -107,6 +110,8 @@ public class Player {
 	
 	private List<Torque> torquequeue = new ArrayList<Torque>();
 	private List<Force> forceQueue = new ArrayList<Force>();
+	
+	private boolean wasAPressed = false;
 	
 	public Player(String name, double x, double y, Team team) {
 		this.team = team;
@@ -354,6 +359,58 @@ public class Player {
     		double speedMultiplier = Game.keyHandler().isPressed(KeyEvent.VK_SHIFT) ? 5 : 1;
     		
     		double mechPower = 110 * speedMultiplier;
+    		
+    		ControllerState cont = Game.controllerState();
+    		
+    		if(cont.isConnected) {
+    			double rt = cont.rightTrigger;
+    			if(rt < 0.05) rt = 0;
+    			
+    			Game.setVibration((float)rt, (float)rt);
+    			
+    			mechPower *= (rt * 5)+1;
+    			
+    			double mag = cont.leftStickMagnitude;
+    			if(mag < 0.25) mag = 0;
+    			
+    			mag *= mechPower;
+    			
+    			Vector2 v = new Vector2(Math.toRadians(-cont.leftStickAngle));
+    			v.setMagnitude(mag);
+    			base.applyForce(v);
+    			
+    			
+    			double rot = cont.rightStickX;
+    			if(Math.abs(rot) < 0.25) rot = 0;
+    			base.applyTorque(200 * rot);
+    			
+    			boolean nowAPressed = cont.rb;
+    			
+    			if(nowAPressed && !wasAPressed) {
+    				java.awt.Robot r;
+					try {
+						r = new java.awt.Robot();
+						r.keyPress(KeyEvent.VK_SPACE);
+					} catch (AWTException e) {
+						e.printStackTrace();
+					}
+    			}else if(!nowAPressed && wasAPressed) {
+    				java.awt.Robot r;
+					try {
+						r = new java.awt.Robot();
+						r.keyRelease(KeyEvent.VK_SPACE);
+					} catch (AWTException e) {
+						e.printStackTrace();
+					}
+    			}
+    			
+    			wasAPressed = nowAPressed;
+    			
+    			if(cont.rightStickClick) {
+    				double nz = GameObject.ZOOM_SCALE + (cont.rightStickY/2) * (GameObject.SCALE/10);
+    				GameObject.ZOOM_SCALE = Math.max(-50, Math.min(nz, 50));
+    			}
+    		}
     		
     		if(Game.keyHandler().isPressed(KeyEvent.VK_W)){
     			Vector2 vec = base.getWorldCenter().subtract(base.getWorldCenter().copy().add(0, mechPower));

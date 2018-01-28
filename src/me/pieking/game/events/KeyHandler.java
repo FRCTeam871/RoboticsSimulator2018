@@ -18,6 +18,7 @@ import me.pieking.game.Vars;
 import me.pieking.game.Gameplay.GameState;
 import me.pieking.game.command.Command;
 import me.pieking.game.robot.Robot;
+import me.pieking.game.scripting.LuaScriptLoader;
 import me.pieking.game.world.Balance.Team;
 import me.pieking.game.world.GameWorld;
 import me.pieking.game.world.Player;
@@ -91,9 +92,17 @@ public class KeyHandler implements KeyListener{
 				Game.getWorld().useLevitate(e.isControlDown() ? Team.RED : Team.BLUE);
 			}else if(e.getKeyCode() == KeyEvent.VK_NUMPAD4){
 				Vars.showCollision = !Vars.showCollision;
+			}else if(e.getKeyCode() == KeyEvent.VK_NUMPAD0) {
+				Game.getWorld().resetPowerups();
+			}
+			
+			if(e.getKeyCode() == KeyEvent.VK_F8) {
+				Game.getWorld().getSelfPlayer().getRobot().setAutonScript(LuaScriptLoader.runScript("awesomeAuton"));
+				Game.getWorld().getSelfPlayer().getRobot().getAutonScript().run();
 			}
 			
 			if(e.getKeyCode() == KeyEvent.VK_V && Game.gameplay.getState() == GameState.WAITING_FOR_PLAYERS){
+				
 				Game.gameplay.voteToStart(Game.getWorld().getSelfPlayer());
 			}
 			

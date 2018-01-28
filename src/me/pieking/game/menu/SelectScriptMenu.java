@@ -12,6 +12,8 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.studiohartman.jamepad.ControllerState;
+
 import me.pieking.game.FileSystem;
 import me.pieking.game.Game;
 import me.pieking.game.gfx.Fonts;
@@ -100,7 +102,8 @@ protected List<EToggle> toggles = new ArrayList<EToggle>();
 		g.setTransform(trans);
 		
 		selected = null;
-		hover = new Point(-1, -1);
+		if(!Game.controllerState().isConnected) hover = new Point(-1, -1);
+		System.out.println(hover);
 		for(int x = 0; x < gridW; x++){
 			for(int y = 0; y < gridH; y++){
 				
@@ -109,6 +112,11 @@ protected List<EToggle> toggles = new ArrayList<EToggle>();
 				Rectangle r = new Rectangle(x * (gridSizeW + gridPadding) + mx + boxPadding, y * (gridSizeH + gridPadding) + my + boxPadding + titleHeight, gridSizeW, gridSizeH);
 				
 				boolean hover = r.contains(Game.mouseLoc());
+				
+				if(Game.controllerState().isConnected) {
+					hover = this.hover.y == index;
+				}
+				
 				if(index > 0 && index <= avail.size()){
 					
 					if(robot.getAutonScript() != null && avail.get(index-1).equals(robot.getAutonScript().name)){
@@ -254,6 +262,11 @@ protected List<EToggle> toggles = new ArrayList<EToggle>();
 	protected void tick() {
 		boolean nowLeftPressed = Game.mouseHandler().isLeftPressed();
 		
+		ControllerState cont = Game.controllerState();
+		if(cont.isConnected) {
+			if(cont.a) nowLeftPressed = true;
+		}
+		
 		if(nowLeftPressed && !wasLeftPressed){
 			if(selected != null){
 				System.out.println("selected: " + selected);
@@ -267,7 +280,33 @@ protected List<EToggle> toggles = new ArrayList<EToggle>();
 			}
 		}
 		
-		wasLeftPressed  = nowLeftPressed;
+		wasLeftPressed = nowLeftPressed;
+		
+		
+		if(cont.isConnected) {
+			if(cont.dpadDownJustPressed) {
+				if(hover.x == -1) {
+					hover = new Point(0, 0);
+				}else {
+					int newHover = hover.y + 1;
+					if(newHover < 0) newHover += 4;
+					if(newHover > 3) newHover -= 4;
+					System.out.println(newHover);
+					hover = new Point(0, newHover);
+				}
+			}else if(cont.dpadUpJustPressed) {
+				if(hover.x == -1) {
+					hover = new Point(0, 0);
+				}else {
+					int newHover = hover.y - 1;
+					if(newHover < 0) newHover += 4;
+					if(newHover > 3) newHover -= 4;
+					System.out.println(newHover);
+					hover = new Point(0, newHover);
+				}
+			}
+		}
+		
 	}
 
 	@Override

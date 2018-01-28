@@ -1,10 +1,13 @@
 package me.pieking.game.net;
 
+import java.awt.AWTException;
+import java.awt.MouseInfo;
 import java.lang.reflect.InvocationTargetException;
 
 import javax.swing.JOptionPane;
 
 import com.jmr.wrapper.client.Client;
+import com.studiohartman.jamepad.ControllerState;
 
 import me.pieking.game.Game;
 import me.pieking.game.net.packet.JoinPacket;
@@ -20,6 +23,28 @@ public class ClientStarter {
 	private final Client client;
 	
 	private ClientStarter() {
+		
+//		new Thread(() -> {
+//			while (true) {
+//				ControllerState state = Game.controllerState();
+//				if(state != null) {
+//    				if(state.isConnected) {
+//    					try {
+//    						java.awt.Robot r = new java.awt.Robot();
+//    						if(state.leftStickClick) r.mouseMove(MouseInfo.getPointerInfo().getLocation().x + (int)(state.leftStickX * 2), MouseInfo.getPointerInfo().getLocation().y - (int)(state.leftStickY * 5));
+//    					} catch (AWTException e) {
+//    						e.printStackTrace();
+//    					}
+//    				}
+//    			}
+//				
+//				try {
+//					Thread.sleep(10);
+//				} catch (InterruptedException e) {
+//					e.printStackTrace();
+//				}
+//			}
+//		}).start();
 		
 		String rawip = JOptionPane.showInputDialog("Enter an IP: ", "localhost:1341"); //47.18.146.218
 		

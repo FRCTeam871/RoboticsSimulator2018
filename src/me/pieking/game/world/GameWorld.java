@@ -55,6 +55,8 @@ public class GameWorld {
 	private List<ScalePlatform> scalePlatforms = new ArrayList<ScalePlatform>();
 	private List<Balance> scales = new ArrayList<Balance>();
 	private GameObject autoLineColl;
+	private GameObject redPlatformColl;
+	private GameObject bluePlatformColl;
 	private Scale scale;
 	
 	private double fieldXofs = 28.1;
@@ -69,7 +71,6 @@ public class GameWorld {
 	private PowerUp boost = new PowerUp();
 	private PowerUp force = new PowerUp();
 	private PowerUp levitate = new PowerUp();
-	
 	
 	private boolean cameraCentered = false;
 	
@@ -236,6 +237,22 @@ public class GameWorld {
 		aBf.setSensor(true);
 		autoLineColl.addFixture(aBf);
 		getWorld().addBody(autoLineColl);
+		
+		redPlatformColl = new GameObject();
+		Rectangle rpRect = new Rectangle(5, 9.4);
+		rpRect.translate(30.40, 13.15);
+		BodyFixture rpBf = new BodyFixture(rpRect);
+		rpBf.setSensor(true);
+		redPlatformColl.addFixture(rpBf);
+		getWorld().addBody(redPlatformColl);
+		
+		bluePlatformColl = new GameObject();
+		Rectangle bpRect = new Rectangle(5, 9.4);
+		bpRect.translate(34.45, 13.15);
+		BodyFixture bpBf = new BodyFixture(bpRect);
+		bpBf.setSensor(true);
+		bluePlatformColl.addFixture(bpBf);
+		getWorld().addBody(bluePlatformColl);
 
 		// place power cubes on the field
 		
@@ -276,8 +293,8 @@ public class GameWorld {
 		Switch redSwitch = new Switch(-10.15 + fieldXofs, 0 + fieldYofs, switchOrientation[2], srr, srb);
 		addScale(redSwitch);
 
-		teamProperties.put(Team.RED, new TeamProperties(redSwitch, redExchangeSensor));
-		teamProperties.put(Team.BLUE, new TeamProperties(blueSwitch, blueExchangeSensor));
+		teamProperties.put(Team.RED, new TeamProperties(redSwitch, redExchangeSensor, new Vault(Team.RED)));
+		teamProperties.put(Team.BLUE, new TeamProperties(blueSwitch, blueExchangeSensor, new Vault(Team.BLUE)));
 		
 	}
 	
@@ -503,6 +520,8 @@ public class GameWorld {
     		yOffset = -selfPlayer.base.getWorldCenter().y * GameObject.SCALE + Game.getDisp().realHeight/2;
 		}
 		
+		getProperties(Game.getWorld().getSelfPlayer().team).getVault().tick();
+		
 		if(cameraCentered){
 			
 			GameObject.SCALE = 24;
@@ -523,12 +542,12 @@ public class GameWorld {
 		
 		if(Game.gameplay.getState() == GameState.AUTON || Game.gameplay.getState() == GameState.TELEOP) {
     		if(boost.getTimer() > 0){
-    			if(boost.getLevel() % 2 == 0){ // 0 or 2
+    			if((boost.getLevel()-1) % 2 == 0){ // 0 or 2
         			if(boost.getUsing() == Team.RED) getProperties(Team.RED).setSwitchScoreMod(2);
         			if(boost.getUsing() == Team.BLUE) getProperties(Team.BLUE).setSwitchScoreMod(2);
     			}
     			
-    			if(boost.getLevel() >= 1){ // 1 or 2
+    			if((boost.getLevel()-1) >= 1){ // 1 or 2
     				if(boost.getUsing() == Team.RED) getProperties(Team.RED).setScaleScoreMod(2);
         			if(boost.getUsing() == Team.BLUE) getProperties(Team.BLUE).setScaleScoreMod(2);
     			}
@@ -549,12 +568,12 @@ public class GameWorld {
     		}
     		
     		if(force.getTimer() > 0){
-    			if(force.getLevel() % 2 == 0){ // 0 or 2
+    			if((force.getLevel()-1) % 2 == 0){ // 0 or 2
     				if(force.getUsing() == Team.RED) getSwitch(Team.RED).setOwnerOverride(Team.RED);
     				if(force.getUsing() == Team.BLUE) getSwitch(Team.BLUE).setOwnerOverride(Team.BLUE);
     			}
     			
-    			if(force.getLevel() >= 1){ // 1 or 2
+    			if((force.getLevel()-1) >= 1){ // 1 or 2
     				scale.setOwnerOverride(force.getUsing());
     			}
     			
@@ -577,10 +596,12 @@ public class GameWorld {
     		List<PowerCube> cub = new ArrayList<PowerCube>();
     		cub.addAll(cubes);
     		for(PowerCube c : cub){
-    			if(exchanging .contains(c)) continue;
+    			if(exchanging.contains(c)) continue;
     			for(Team team : getPlayingTeams()){
     				if(getExchangeSensor(team) != null && getExchangeSensor(team).contains(c.base.getWorldCenter())){
     					getProperties(team).addCubeStorage(1);
+    					c.base.destructionTime = System.currentTimeMillis() + 500;
+    					c.base.creationTime = Game.getTime();
     					exchanging.add(c);
     					c.base.setLinearVelocity(team == Team.RED ? -40 : 40, 0); // red's exchange is facing left while blue's is facing right
     					Scheduler.delayedTask(() -> {
@@ -817,6 +838,7 @@ public class GameWorld {
 		if(force.getUsing() == team) return false;
 //		System.out.println("boost " + power_boost_used.contains(team));
 		if(boost.getUsed().contains(team)) return false;
+		if(getProperties(team).getBoostLevel() < 1) return false;
 		
 		boost.addUsed(team);
 		
@@ -851,6 +873,7 @@ public class GameWorld {
 	public boolean useForce(Team team){
 		if(boost.getUsing() == team) return false;
 		if(force.getUsed().contains(team)) return false;
+		if(getProperties(team).getForceLevel() < 1) return false;
 		
 		force.addUsed(team);
 		
@@ -884,6 +907,7 @@ public class GameWorld {
 	 */
 	public boolean useLevitate(Team team){
 		if(getProperties(team).getUsedLevitate()) return false;
+		if(getProperties(team).getLevitateLevel() < 3) return false;
 		getProperties(team).setUsedLevitate(true);
 		return true;
 	}
@@ -899,6 +923,9 @@ public class GameWorld {
 			getProperties(t).setUsedLevitate(false);
 			getProperties(t).setSwitchScoreMod(1);
 			getProperties(t).setScaleScoreMod(1);
+			getProperties(t).setBoostLevel(0);
+			getProperties(t).setForceLevel(0);
+			getProperties(t).setLevitateLevel(0);
 		}
 	}
 	
@@ -1106,8 +1133,8 @@ public class GameWorld {
 		return force;
 	}
 
-	public Vault getVault() {
-		return vault;
+	public GameObject getPlatform(Team team) {
+		return team == Team.RED ? redPlatformColl : bluePlatformColl;
 	}
 	
 	

@@ -2,6 +2,8 @@ package me.pieking.game.world;
 
 import java.util.HashMap;
 
+import me.pieking.game.Vault;
+
 public class TeamProperties {
 	private Switch teamSwitch;
 	private GameObject exchangeSensor;
@@ -12,11 +14,14 @@ public class TeamProperties {
 	private int score = 0;
 	private int boostLevel = 0;
 	private int forceLevel = 0;
+	private int levitateLevel = 0;
 	private boolean usedLevitate = false;
+	private Vault vault;
 
-	public TeamProperties(Switch teamSwitch, GameObject exchangeSensor) {
+	public TeamProperties(Switch teamSwitch, GameObject exchangeSensor, Vault vault) {
 		this.teamSwitch = teamSwitch;
 		this.exchangeSensor = exchangeSensor;
+		this.vault = vault;
 		
 		penalties.put(Pentalty.FOUL, 0);
 		penalties.put(Pentalty.TECH_FOUL, 0);
@@ -112,5 +117,21 @@ public class TeamProperties {
 
 	public void setForceLevel(int forceLevel) {
 		this.forceLevel = forceLevel;
+	}
+
+	public int getLevitateLevel() {
+		return levitateLevel;
+	}
+
+	public void setLevitateLevel(int levitateLevel) {
+		this.levitateLevel = levitateLevel;
+	}
+
+	public Vault getVault() {
+		return vault;
+	}
+
+	public void setVault(Vault vault) {
+		this.vault = vault;
 	}
 }

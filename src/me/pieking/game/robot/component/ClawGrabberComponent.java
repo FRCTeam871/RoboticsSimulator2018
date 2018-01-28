@@ -55,18 +55,21 @@ public class ClawGrabberComponent extends ActivatableComponent {
 		r.translate(unitSize/2, unitSize/2);
 		BodyFixture bf = new BodyFixture(r);
 		bf.setFilter(new PlayerFilter(pl));
+//		bf.setDensity(0.01);
 		base.addFixture(bf);
 		
 		r = new Rectangle(unitSize / 8, unitSize * .75);
 		r.translate(-unitSize/2, unitSize / 8);
 		bf = new BodyFixture(r);
 		bf.setFilter(new PlayerFilter(pl));
+//		bf.setDensity(0.01);
 		base.addFixture(bf);
 		
 		r = new Rectangle(unitSize / 8, unitSize * .75);
 		r.translate(unitSize/2 + unitSize, unitSize / 8);
 		bf = new BodyFixture(r);
 		bf.setFilter(new PlayerFilter(pl));
+//		bf.setDensity(0.01);
 		base.addFixture(bf);
 		
 		base.setMass(new Mass(base.getMass().getCenter(), 0, 0));
@@ -192,6 +195,7 @@ public class ClawGrabberComponent extends ActivatableComponent {
 			r.translate(unitSize/2, unitSize/2);
 			BodyFixture bf = new BodyFixture(r);
 			bf.setFilter(new PlayerFilter(pl));
+//			bf.setDensity(0.01);
 			lastBody.addFixture(bf);
 			
 //			r = new Rectangle(unitSize / 8, unitSize * .75);
@@ -217,6 +221,7 @@ public class ClawGrabberComponent extends ActivatableComponent {
 			r.translate(unitSize/2, unitSize/2);
 			BodyFixture bf = new BodyFixture(r);
 			bf.setFilter(new PlayerFilter(pl));
+//			bf.setDensity(0.01);
 			lastBody.addFixture(bf);
 			
 			if(!closeToPlatform){
@@ -224,12 +229,14 @@ public class ClawGrabberComponent extends ActivatableComponent {
     			r.translate(-unitSize/2, unitSize / 8);
     			bf = new BodyFixture(r);
     			bf.setFilter(new PlayerFilter(pl));
+//    			bf.setDensity(0.01);
     			lastBody.addFixture(bf);
     			
     			r = new Rectangle(unitSize / 8, unitSize * .75);
     			r.translate(unitSize/2 + unitSize, unitSize / 8);
     			bf = new BodyFixture(r);
     			bf.setFilter(new PlayerFilter(pl));
+//    			bf.setDensity(0.01);
     			lastBody.addFixture(bf);
 			}
 		}
