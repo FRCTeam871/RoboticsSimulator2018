@@ -213,7 +213,16 @@ public class ClawGrabberComponent extends ActivatableComponent {
 			Rectangle r2 = new Rectangle((unitSize * 2) * 0.8, (unitSize * 2) * 0.8);
 			r2.translate(unitSize/2, unitSize/2 - unitSize);
 			BodyFixture bf2 = new BodyFixture(r2);
-			bf2.setFilter(new GameObjectFilter(FilterType.POWER_CUBE_HOLDING));
+			double height = pl.getHeight();
+			System.out.println(height);
+			if(height > 0.9) {
+				bf2.setFilter(new GameObjectFilter(FilterType.POWER_CUBE_HOLDING_HIGH));
+			}else if(height > 0.2) {
+				bf2.setFilter(new GameObjectFilter(FilterType.POWER_CUBE_HOLDING_LOW));
+			}else {
+				System.out.println("ground");
+				bf2.setFilter(new GameObjectFilter(FilterType.POWER_CUBE_HOLDING_GROUND));
+			}
 			lastBody.addFixture(bf2);
 			
 		}else{

@@ -325,6 +325,26 @@ public class Gameplay {
     		g.setColor(Team.BLUE.color);
     		g.drawString("" + blueScore, Game.getWidth()/2 + (colonWidth), scoreBoardY);
     		
+    		// lifter height
+    		
+    		double roboHeight = 0.0;
+    		if(Game.getWorld().getSelfPlayer().isClimbing()) {
+    			roboHeight = 1 - Game.getWorld().getSelfPlayer().getHeight();
+    		}
+    		
+    		g.setColor(Color.DARK_GRAY);
+    		g.fillRect(Game.getWidth() - 20, Game.getHeight() - 250 -(int)(100 * roboHeight), 10, 110);
+    		
+    		double clawHeight = Game.getWorld().getSelfPlayer().getHeight();
+    		
+    		if(roboHeight > 0) clawHeight = 1;
+    		
+    		g.setColor(Color.LIGHT_GRAY);
+    		g.fillRect(Game.getWidth() - 20 - 50, Game.getHeight() - 250 + 100-(int)(100 * clawHeight), 50, 10);
+    		
+    		g.setColor(Color.LIGHT_GRAY);
+    		g.fillRect(Game.getWidth() - 20 - 50 + 10, Game.getHeight() - 250 + 10 + 100-(int)(100 * roboHeight), 50, 50);
+    		
 		}
 		
 		if(Game.gameplay.getState() == GameState.TELEOP) {

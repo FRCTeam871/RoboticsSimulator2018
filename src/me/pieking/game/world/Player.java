@@ -113,6 +113,10 @@ public class Player {
 	
 	private boolean wasAPressed = false;
 	
+	private double height = 0f;
+	
+	private boolean climbing = false;
+	
 	public Player(String name, double x, double y, Team team) {
 		this.team = team;
 		this.name = name;
@@ -365,10 +369,35 @@ public class Player {
     		if(cont.isConnected) {
     			double rt = cont.rightTrigger;
     			if(rt < 0.05) rt = 0;
+    			double lt = cont.leftTrigger;
+    			if(rt < 0.05) rt = 0;
     			
-    			Game.setVibration((float)rt, (float)rt);
+    			float liftFactor = 48f;
     			
-    			mechPower *= (rt * 5)+1;
+    			if(isClimbing()) liftFactor *= 4;
+    			
+    			double newHeight = Math.max(0f, Math.min(height + (rt / liftFactor) - (lt / liftFactor), 1f));
+    			
+    			ClawGrabberComponent claw = null;
+				for(Component c : robot.getComponents()) {
+					if(c instanceof ClawGrabberComponent) {
+						claw = (ClawGrabberComponent)c;
+					}
+				}
+				
+				if(claw != null) {
+    				if(Game.getWorld().isInClimbRange(claw, team)) {
+    					if(newHeight < height && height >= 0.98) {
+    						setClimbing(true);
+    					}else if(newHeight > height && newHeight >= 0.98) {
+    						setClimbing(false);
+    					}
+    				}else {
+    					setClimbing(false);
+    				}
+				}
+    			
+    			height = newHeight; 
     			
     			double mag = cont.leftStickMagnitude;
     			if(mag < 0.25) mag = 0;
@@ -1024,6 +1053,32 @@ public class Player {
 
 	public double getRotation() {
 		return base.getTransform().getRotation();
+	}
+	public double getHeight() {
+		return height;
+	}
+	
+	public double getRobotHeight() {
+		return height;
+	}
+
+	public boolean isClimbing() {
+		return climbing;
+	}
+
+	public void setClimbing(boolean climbing) {
+		if(climbing) {
+			base.setLinearVelocity(0, 0);
+			base.setAngularVelocity(0);
+			
+			for(Component c : robot.getComponents()) {
+				c.lastBody.setLinearVelocity(0, 0);
+				c.lastBody.setAngularVelocity(0);
+			}
+		}
+//		System.out.println(climbing);
+		robot.setCanMove(!climbing);
+		this.climbing = climbing;
 	}
 	
 }

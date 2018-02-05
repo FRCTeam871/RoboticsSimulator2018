@@ -13,9 +13,9 @@ import me.pieking.game.robot.component.Component;
 public class Scale extends Balance {
 
 	public Scale(double x, double y, boolean blueTop, LEDStrip ledStripTop, LEDStrip ledStripBottom) {
-		super(x, y, blueTop, ledStripTop, ledStripBottom);
-		red = new ScalePlatform(x, y - 4.75, ledStripTop);
-		blue = new ScalePlatform(x, y + 4.75, ledStripBottom);
+		super(x, y, blueTop, ledStripTop, ledStripBottom, true);
+		red = new ScalePlatform(x, y - 4.75, ledStripTop, true);
+		blue = new ScalePlatform(x, y + 4.75, ledStripBottom, true);
 		
 		red.ledXofs = -1;
 		red.ledYofs = -1;

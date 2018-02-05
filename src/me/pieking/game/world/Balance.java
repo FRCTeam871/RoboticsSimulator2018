@@ -22,9 +22,9 @@ public class Balance {
 	
 	public GameObject walls;
 	
-	public Balance(double x, double y, boolean blueTop, LEDStrip ledStripTop, LEDStrip ledStripBottom) {
-		red = new ScalePlatform(x-.19, y - 3.5 - .25, 7, 5.5, ledStripTop);
-		blue = new ScalePlatform(x-.19, y + 3.5, 7, 5.5, ledStripBottom);
+	public Balance(double x, double y, boolean blueTop, LEDStrip ledStripTop, LEDStrip ledStripBottom, boolean scale) {
+		red = new ScalePlatform(x-.19, y - 3.5 - .25, 7, 5.5, ledStripTop, scale);
+		blue = new ScalePlatform(x-.19, y + 3.5, 7, 5.5, ledStripBottom, scale);
 		
 		if(blueTop){
 			ScalePlatform temp = red;
