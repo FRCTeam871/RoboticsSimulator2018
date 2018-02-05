@@ -51,7 +51,6 @@ import me.pieking.game.gfx.ShipFileAccessory;
 import me.pieking.game.gfx.ShipFileView;
 import me.pieking.game.menu.ComponentInfoMenu;
 import me.pieking.game.menu.SelectComponentMenu;
-import me.pieking.game.net.packet.PlayerDiePacket;
 import me.pieking.game.net.packet.PlayerUpdatePacket;
 import me.pieking.game.net.packet.ShipAddComponentPacket;
 import me.pieking.game.net.packet.ShipComponentActivatePacket;
@@ -96,9 +95,6 @@ public class Player {
 	public Class<? extends Component> buildSelected;
 	public Component buildPreview;
 	private List<GameObject> bods;
-	
-	public int health = 100;
-	public int maxHealth = 100;
 	
 	public List<WeldJoint> joints = new ArrayList<WeldJoint>();
 	
@@ -293,7 +289,6 @@ public class Player {
     							Game.sendPacket(scap);
     						}
     					}else if(Game.keyHandler().isPressed(KeyEvent.VK_SHIFT)){
-    						damage(100);
     						deleteSelected();
     					}else{
         					cm = new ComponentInfoMenu(selectedComponent);
@@ -316,7 +311,6 @@ public class Player {
     					Component c = createComponent(buildSelected, hoverGrid.x, hoverGrid.y, buildPreview.rot);
     					if(robot.addComponent(c)){
     						invSubtract(buildSelected, 1);
-    						damage(-100);
     					}
     					constructShip();
     				}catch (NoSuchMethodException | SecurityException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException | UnsupportedEncodingException | ClassNotFoundException e) {
@@ -820,13 +814,6 @@ public class Player {
 		
 		this.robot = sh;
 		constructShip();
-		int newHealth = 0;
-		for(Component c : robot.getComponents()){
-			newHealth += 100;
-		}
-		
-		maxHealth = newHealth;
-		health = newHealth;
 	}
 	
 	public void deleteSelected(){
@@ -854,98 +841,14 @@ public class Player {
 				((ActivatableComponent) c).deactivate();
 			}
 			
-			System.out.println("remove " + c);
+//			System.out.println("remove " + c);
 			
 			robot.removeComponent(c);
 			//invAdd(c.getClass(), 1); // TODO: should the player get the component back?
 			constructShip();
 			
-			damage(50);
 //			health -= 100;
 		}
-	}
-	
-	public void damage(int amt){
-		health -= amt;
-		
-		if(health > maxHealth) maxHealth = health;
-		
-		if(health <= 0){
-			die();
-		}
-	}
-	
-	public void die(){
-		
-		if(dead) return;
-		
-		dead = true;
-		for(WeldJoint j : joints){
-			Game.getWorld().getWorld().removeJoint(j);
-		}
-		
-		if(this == Game.getWorld().getSelfPlayer()){
-			PlayerDiePacket pdp = new PlayerDiePacket(name);
-			Game.sendPacket(pdp);
-			
-			Scheduler.delayedTask(() -> {
-				chooseShip();
-				translateToOrigin();
-				translate(Rand.range(-10, 10), Rand.range(-5, 5));
-				setRotation(0);
-				base.setLinearVelocity(0, 0);
-				base.setAngularVelocity(0);
-			}, 180);
-			
-		}
-		
-		for(Component c : robot.getComponents()){
-			Vector2 v = c.lastBody.getWorldCenter().subtract(base.getWorldCenter()).multiply(6);
-			Vector2 rand = new Vector2(Rand.range(-2f, 2f), Rand.range(-2f, 2f));
-			v.add(rand);
-			c.lastBody.applyForce(v);
-			c.lastBody.setAngularVelocity(Rand.range(-2f, 2f));
-			
-			if(c instanceof ActivatableComponent){
-				((ActivatableComponent) c).deactivate();
-			}
-			
-			final Component com = c;
-			Scheduler.delayedTask(() -> {
-				ShipRemoveComponentPacket srcp = new ShipRemoveComponentPacket(name, com.bounds.x + "", com.bounds.y + "");
-				Game.sendPacket(srcp);
-				robot.removeComponent(com);
-				
-				Game.getWorld().getWorld().removeBody(com.lastBody);
-			}, Rand.range(60 * 3, 60 * 5));
-			
-			for(int i = 0; i < 10; i++){
-				GameObject fire = new GameObject();
-				BodyFixture fixture = new BodyFixture(new Circle(Rand.range(2.5f, 4f) / 45f));
-				fire.addFixture(fixture);
-				//fixture.setSensor(true);
-				fixture.setFilter(new GameObjectFilter(FilterType.PARTICLE));
-				fire.translate(base.getWorldCenter());
-				fire.setMass(MassType.NORMAL);
-				Color col = new Color(255, Rand.range(70, 140), 0);
-				float shade = Rand.range(0.1f, 0.6f);
-				col = new Color(0.8f, shade, 0f, 1f);
-				//System.out.println(lastBody.getLinearVelocity().getMagnitude());
-				
-				fire.color = col;
-				//System.out.println(lastBody.getLinearVelocity().getMagnitude());
-				Vector2 rand2 = new Vector2(Rand.range(-1f, 1f), Rand.range(-1f, 1f));
-				fire.applyForce(v.copy().multiply(0.5).add(rand2));
-				fire.destructionTime = fire.creationTime + 2000;
-				
-				Game.getWorld().addParticle(fire);
-			}
-			
-		}
-		
-		s_explode.stop();
-		s_explode.start();
-		
 	}
 	
 	private void chooseShip() {
