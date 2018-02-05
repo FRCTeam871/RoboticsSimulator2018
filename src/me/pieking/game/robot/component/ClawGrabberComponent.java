@@ -14,6 +14,9 @@ import org.dyn4j.geometry.Vector2;
 import me.pieking.game.Game;
 import me.pieking.game.gfx.Sprite;
 import me.pieking.game.gfx.Spritesheet;
+import me.pieking.game.net.packet.AddCubePacket;
+import me.pieking.game.net.packet.DropCubePacket;
+import me.pieking.game.net.packet.PickupCubePacket;
 import me.pieking.game.world.GameObject;
 import me.pieking.game.world.GameObjectFilter;
 import me.pieking.game.world.GameObjectFilter.FilterType;
@@ -85,13 +88,8 @@ public class ClawGrabberComponent extends ActivatableComponent {
 	public void tick(Player pl) {
 		super.tick(pl);
 		
-//		if(setCube) {
-//			setHasCube(true);
-//			setCube = false;
-//		}
-		
 		if(activated){
-			
+			updateCollision();
 		}else{
 			double nearestPlatform = Double.MAX_VALUE;
 			
@@ -139,26 +137,35 @@ public class ClawGrabberComponent extends ActivatableComponent {
 		super.activate();
 		sprite = sprOn;
 		
-		for(PowerCube c : Game.getWorld().getCubes()){
-			if(!Game.getWorld().isCubeOnScale(c)) {
-				if(c.base.getWorldCenter().distance(lastBody.getWorldCenter()) < unitSize * 1.3){
-					
-					double myAngle = Math.toDegrees(lastBody.getTransform().getRotation());
-					
-					for(int angleOfs = -360; angleOfs < 360; angleOfs += 90){
-    					double cubeAngle = Math.toDegrees(c.base.getTransform().getRotation()) + angleOfs;
-    					cubeAngle = cubeAngle % 360;
-    					
-    					System.out.println(myAngle + " " + cubeAngle);
-    					if(Math.abs(myAngle - cubeAngle) <= 10){
-    						holdingAngle = angleOfs;
-        					Game.getWorld().removeCube(c);
-        					setHasCube(true);
-        					break;
-    					}
-					}
-				}
-			}
+		Player p = Game.getWorld().getPlayer(this);
+		if(p == Game.getWorld().getSelfPlayer()) {
+			if(p.getHeight() < 0.1) {
+        		for(PowerCube c : Game.getWorld().getCubes()){
+        			if(!Game.getWorld().isCubeOnScale(c)) {
+        				if(c.base.getWorldCenter().distance(lastBody.getWorldCenter()) < unitSize * 1.3){
+        					
+        					double myAngle = Math.toDegrees(lastBody.getTransform().getRotation());
+        					
+        					for(int angleOfs = -360; angleOfs < 360; angleOfs += 90){
+            					double cubeAngle = Math.toDegrees(c.base.getTransform().getRotation()) + angleOfs;
+            					cubeAngle = cubeAngle % 360;
+            					
+        //    					System.out.println(myAngle + " " + cubeAngle);
+            					if(Math.abs(myAngle - cubeAngle) <= 10){
+            						
+            						PickupCubePacket pcp = new PickupCubePacket(c.getId() + "", p.name);
+            						Game.sendPacket(pcp);
+            						
+            						holdingAngle = angleOfs;
+                					Game.getWorld().removeCube(c);
+                					setHasCube(true);
+                					break;
+            					}
+        					}
+        				}
+        			}
+        		}
+    		}
 		}
 		
 //		setHasCube(true);
@@ -170,10 +177,11 @@ public class ClawGrabberComponent extends ActivatableComponent {
 		sprite = sprOff;
 		
 		if(hasCube){
-			Transform tra = lastBody.getTransform().copy();
-			double r = tra.getRotation() - Math.toRadians(90);
-			dummyCube.base.applyForce(new Vector2(unitSize * Math.cos(r), unitSize * Math.sin(r)).multiply(500));
-			Game.getWorld().addPowerCube(dummyCube);
+			Player p = Game.getWorld().getPlayer(this);
+			if(p == Game.getWorld().getSelfPlayer()) {
+				DropCubePacket dcp = new DropCubePacket(p.name);
+				Game.sendPacket(dcp);
+			}
 			setHasCube(false);
 		}
 		
@@ -184,7 +192,14 @@ public class ClawGrabberComponent extends ActivatableComponent {
 	}
 	
 	public void setHasCube(boolean cube){
+		System.out.println("setHasCube(" + cube + ");");
 		this.hasCube = cube;
+		if(Game.isServer() || !Game.isConnected() && !cube) {
+			Transform tra = lastBody.getTransform().copy();
+			double r = tra.getRotation() - Math.toRadians(90);
+			dummyCube.base.applyForce(new Vector2(unitSize * Math.cos(r), unitSize * Math.sin(r)).multiply(500));
+			Game.getWorld().addPowerCube(dummyCube);
+		}
 		updateCollision();
 	}
 	

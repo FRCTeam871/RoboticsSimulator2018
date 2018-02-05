@@ -2,10 +2,11 @@ package me.pieking.game.net.packet;
 
 import me.pieking.game.Game;
 import me.pieking.game.world.Player;
+import me.pieking.game.world.PowerCube;
 
-public class PlayerUpdatePacket extends Packet {
+public class CubeUpdatePacket extends Packet {
 
-	String user;
+	int id;
 	float x;
 	float y;
 	float xa;
@@ -13,8 +14,8 @@ public class PlayerUpdatePacket extends Packet {
 	float rot;
 	float rotA;
 	
-	public PlayerUpdatePacket(String username, String x, String y, String xa, String ya, String rot, String rotA) {
-		this.user = username;
+	public CubeUpdatePacket(String id, String x, String y, String xa, String ya, String rot, String rotA) {
+		this.id = Integer.parseInt(id);
 		this.x = Float.parseFloat(x);
 		this.y = Float.parseFloat(y);
 		this.xa = Float.parseFloat(xa);
@@ -25,21 +26,21 @@ public class PlayerUpdatePacket extends Packet {
 
 	@Override
 	public String format() {
-		return user + "|" + x + "|" + y + "|" + xa + "|" + ya + "|" + rot + "|" + rotA;
+		return id + "|" + x + "|" + y + "|" + xa + "|" + ya + "|" + rot + "|" + rotA;
 	}
 
 	@Override
 	public void doAction() {
-		Player p = Game.getWorld().getPlayer(user);
+		PowerCube c = Game.getWorld().getPowerCube(id);
 //		System.out.println(p);
-		if(p != null){
+		if(c != null){
 			
 //			float rot = Game.getTime() / 60f;
 			
-			p.translateToOrigin();
-			p.setRotation(rot);
-			p.translateToOrigin();
-			p.translate(x, y);
+			c.base.translateToOrigin();
+			c.setRotation(rot);
+			c.base.translateToOrigin();
+			c.base.translate(x, y);
 			
 //			tr.rotate(rot, p.base.getWorldCenter());
 //			p.base.translateToOrigin();
@@ -49,10 +50,8 @@ public class PlayerUpdatePacket extends Packet {
 ////			p.base.getTransform().setRotation(rot);
 //			p.base.translate(x, y);
 //			System.out.println(p.base.getWorldCenter());
-			p.setActiveLinearVelocity(xa, ya);
-			p.setActiveAngularVelocity(rotA);
-//			p.base.setLinearVelocity(xa, ya);
-//			p.base.setAngularVelocity(rotA);
+			c.base.setLinearVelocity(xa, ya);
+			c.base.setAngularVelocity(rotA);
 			
 //			p.constructShip();
 			

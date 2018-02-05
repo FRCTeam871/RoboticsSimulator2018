@@ -20,9 +20,7 @@ public class GameObjectFilter implements Filter{
 				Player pl = ((PlayerFilter) f).pl;
 				if(pl != null && pl.noClip) return false;
 			}
-//			if(this.type != FilterType.FIRE){
-//				System.out.println(this.type + " collides with " + f.type + "? " + this.type.collidesWith(f.type));
-//			}
+			
 			if(this.type.collidesWith(f.type)){
 				return true;
 			}else{
@@ -70,6 +68,7 @@ public class GameObjectFilter implements Filter{
 		
 		public boolean collidesWith(FilterType f){
 			for(FilterType fi : coll){
+				if(f == POWER_CUBE_HOLDING_GROUND) System.out.println(f + " " + fi);
 				if(fi == f){
 					return true;
 				}

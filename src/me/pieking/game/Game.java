@@ -447,6 +447,11 @@ public class Game {
 			e.printStackTrace();
 		}
 	}
+
+	public static boolean isConnected() {
+		if(ClientStarter.clientStarter == null || ClientStarter.clientStarter.getClient() == null) return false;
+		return ClientStarter.clientStarter.getClient().isConnected();
+	}
 	
 	public static void toggleFullScreen(){
 		

@@ -25,7 +25,7 @@ import me.pieking.game.robot.component.Component;
 
 public class GameObject extends Body {
 	
-	public static double DEFAULT_SCALE = 60.0;
+	public static double DEFAULT_SCALE = 50.0;
 	public static double SCALE = DEFAULT_SCALE;
 	public static double DESIRED_SCALE = DEFAULT_SCALE;
 	public static double ZOOM_SCALE = 0.0;

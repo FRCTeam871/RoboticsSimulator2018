@@ -7,7 +7,7 @@ public class ClientListener implements SocketListener {
 
 	@Override
 	public void received(Connection con, Object object) {
-//		System.out.println("Received: " + object + " " + (object instanceof String));
+		System.out.println("Received: " + object + " " + (object instanceof String));
 		
 		if(object instanceof String && !((String)object).equals("TestAlivePing")){
 			try {

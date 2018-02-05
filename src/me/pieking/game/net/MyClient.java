@@ -131,11 +131,11 @@ public class MyClient extends Client implements IProtocol {
 	 */
 	public void setListener(SocketListener listener) {
 		this.listener = listener;
+		System.out.println("listener = " + this.listener);
 	}
 	
-	@Override
 	public SocketListener getListener() {
-		return listener;
+		return this.listener;
 	}
 	
 	@Override

@@ -86,7 +86,7 @@ public class Vault {
 					break;
 			}
 			
-		}else if((!nowMousePressed && wasMousePressed && draggingCube) || (!cont.start && draggingCube)) {
+		}else if((!nowMousePressed && wasMousePressed && draggingCube) || (cont.isConnected && !cont.start && draggingCube)) {
 			draggingCube = false;
 			
 			switch(hoverVault) {

@@ -53,9 +53,12 @@ public class ClientStarter {
 		
 		System.out.println(ip + " " + port);
 		
-		client = new MyClient(ip, port, port);
-		client.getListener();
-		client.setListener(new ClientListener());
+		MyClient cl = new MyClient(ip, port, port);
+		cl.setListener(new ClientListener());
+		
+		client = cl;
+		
+		System.out.println("client = " + client + " " + client.getListener());
 		
 		hasEnteredIp = true;
 	}
@@ -107,6 +110,8 @@ public class ClientStarter {
 		if(p instanceof ShipDataPacket){
 			System.out.println(msg);
 		}
+		
+		System.out.println(msg);
 		
 		p.doAction();
 		
