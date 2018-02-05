@@ -77,7 +77,7 @@ public class KeyHandler implements KeyListener{
 				}
 				
 				if(e.getKeyCode() == KeyEvent.VK_F4){
-					p.die();
+					Game.toggleFullScreen();
 				}
 			}
 			

@@ -1,15 +1,24 @@
 package me.pieking.game;
 
 import java.awt.AWTException;
+import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Image;
+import java.awt.MouseInfo;
 import java.awt.Point;
+import java.awt.Toolkit;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.InputEvent;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.io.IOException;
 import java.util.List;
 
+import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
+import javax.swing.Timer;
 
 import com.studiohartman.jamepad.ControllerManager;
 import com.studiohartman.jamepad.ControllerState;
@@ -19,6 +28,7 @@ import me.pieking.game.events.KeyHandler;
 import me.pieking.game.events.MouseHandler;
 import me.pieking.game.gfx.Disp;
 import me.pieking.game.gfx.Fonts;
+import me.pieking.game.gfx.Images;
 import me.pieking.game.gfx.Render;
 import me.pieking.game.menu.Menu;
 import me.pieking.game.net.ClientStarter;
@@ -79,6 +89,8 @@ public class Game {
 	
 	private static ControllerManager controllerManager;
 	private static ControllerState state;
+	private static boolean fullScreen;
+	private static JPanel jp;
 	
 	/**
 	 * Run the game with arguments
@@ -165,7 +177,7 @@ public class Game {
 		
 		// Doing this hack with the JPanel makes it so the contents of the frame are actually the right dimensions.
 		frame = new JFrame(NAME + " v" + VERSION + " | " + fps + " FPS " + tps + " TPS");
-		JPanel jp = new JPanel();
+		jp = new JPanel();
 		jp.setPreferredSize(new Dimension(WIDTH, HEIGHT));
 		frame.add(jp);
 		frame.pack();
@@ -291,6 +303,7 @@ public class Game {
     			Menu m = menus.get(i);
     			m.iTick();
     		}
+    		
 		}
 		
 		time++;
@@ -435,5 +448,107 @@ public class Game {
 		}
 	}
 	
+	public static void toggleFullScreen(){
+		
+		JFrame newFrame = new JFrame(NAME + " " + VERSION);
+		
+		if(!fullScreen){
+			newFrame.setExtendedState(JFrame.MAXIMIZED_BOTH);
+			newFrame.setUndecorated(true);
+		}else{
+			//newFrame.setExtendedState(JFrame.NORMAL);
+			newFrame.setUndecorated(false);
+		}
+		
+		jp = new JPanel();
+		jp.setPreferredSize(new Dimension(WIDTH - 10, HEIGHT - 10));
+		newFrame.getContentPane().add(jp);
+		newFrame.getContentPane().setBackground(Color.BLACK);
+		newFrame.pack();
+		jp.setVisible(false);
+		newFrame.setVisible(true);
+		newFrame.setLocationRelativeTo(null);
+		newFrame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+		newFrame.setTitle(Game.NAME);
+		newFrame.add(disp);
+		newFrame.setLayout(null);
+		newFrame.addWindowListener(new WindowListener() {
+			@Override
+			public void windowOpened(WindowEvent e) {}
+			@Override
+			public void windowIconified(WindowEvent e) {}
+			@Override
+			public void windowDeiconified(WindowEvent e) {}
+			@Override
+			public void windowDeactivated(WindowEvent e) {}
+			@Override
+			public void windowClosed(WindowEvent e) {}
+			@Override
+			public void windowActivated(WindowEvent e) {}
+			
+			@Override
+			public void windowClosing(WindowEvent e) {
+				try{
+    				if(!isServer() && ClientStarter.clientStarter.getClient().isConnected()){
+        				LeavePacket pack = new LeavePacket(gw.getSelfPlayer().name);
+        				sendPacket(pack);
+    				}
+				}catch(Exception e2){
+					e2.printStackTrace();
+				}
+				
+				System.exit(0);
+			}
+		});
+		newFrame.setResizable(false);
+		
+		newFrame.setIconImage(PowerCube.spr.getImage());
+		
+		if(!fullScreen) {
+			
+			int dheight = (int) (newFrame.getHeight());
+			int dwidth = (int) (dheight * ((float)WIDTH / (float)HEIGHT));
+			
+			//System.out.println(disp.rwidth + " " + dwidth );
+			
+			disp.setBounds((newFrame.getWidth() / 2) - (dwidth / 2), 0, dwidth, dheight);
+			disp.realHeight = dheight + 2;
+			disp.realWidth = dwidth + 2;
+			
+		}else{
+			disp.realHeight = HEIGHT + 1;
+			disp.realWidth = WIDTH + 1;
+			disp.setBounds(0, 0, WIDTH, HEIGHT);
+		}
+		
+		frame.dispose();
+		
+		frame = newFrame;
+		
+//		game.setHideCursor(hideCursor);
+		
+		fullScreen = !fullScreen;
+		
+		java.awt.Robot r;
+		try {
+			
+			r = new java.awt.Robot();
+			
+			Timer t = new Timer(200, new ActionListener() {
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					int x = (int) MouseInfo.getPointerInfo().getLocation().getX();
+					int y = (int) MouseInfo.getPointerInfo().getLocation().getY();
+					r.mouseMove(Toolkit.getDefaultToolkit().getScreenSize().width/2, Toolkit.getDefaultToolkit().getScreenSize().height/2);
+					r.mousePress(InputEvent.BUTTON1_DOWN_MASK);
+					r.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
+					r.mouseMove(x, y);
+				}
+			});
+			t.setRepeats(false);
+			t.start();
+			
+		} catch (AWTException e1) {}
+	}
 	
 }

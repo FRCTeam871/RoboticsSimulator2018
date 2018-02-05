@@ -516,8 +516,8 @@ public class GameWorld {
 			xOffset = -5 * GameObject.SCALE + Game.getDisp().realWidth/2;
     		yOffset = -5 * GameObject.SCALE + Game.getDisp().realHeight/2;
 		}else{
-    		xOffset = -selfPlayer.base.getWorldCenter().x * GameObject.SCALE + Game.getDisp().realWidth/2;
-    		yOffset = -selfPlayer.base.getWorldCenter().y * GameObject.SCALE + Game.getDisp().realHeight/2;
+    		xOffset = -selfPlayer.base.getWorldCenter().x * GameObject.SCALE + Game.getWidth()/2;
+    		yOffset = -selfPlayer.base.getWorldCenter().y * GameObject.SCALE + Game.getHeight()/2;
 		}
 		
 		getProperties(Game.getWorld().getSelfPlayer().team).getVault().tick();
