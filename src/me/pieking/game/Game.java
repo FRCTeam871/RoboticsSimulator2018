@@ -57,7 +57,7 @@ public class Game {
 	private static final String NAME = "Robotics Simulator 2018";
 	
 	/** Follows Semantic Versioning as per <a href="// https://semver.org/">semver.org</a>.*/
-	private static final String VERSION = "0.2.0"; 
+	private static final String VERSION = "0.2.0 - playtest"; 
 	
 	/** Whether the game is running or not. */
 	private static boolean running = false;
@@ -91,6 +91,9 @@ public class Game {
 	private static ControllerState state;
 	private static boolean fullScreen;
 	private static JPanel jp;
+	
+	public static final boolean QUICK_CONNECT = true;
+	public static final boolean GAMEPLAY_DEBUG = true;
 	
 	/**
 	 * Run the game with arguments

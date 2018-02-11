@@ -99,6 +99,8 @@ public class KeyHandler implements KeyListener{
 			if(e.getKeyCode() == KeyEvent.VK_F8) {
 				Game.getWorld().getSelfPlayer().getRobot().setAutonScript(LuaScriptLoader.runScript("awesomeAuton"));
 				Game.getWorld().getSelfPlayer().getRobot().getAutonScript().run();
+			}else if(e.getKeyCode() == KeyEvent.VK_F11){
+				Game.getWorld().getSelfPlayer().constructShip();
 			}
 			
 			if(e.getKeyCode() == KeyEvent.VK_V && Game.gameplay.getState() == GameState.WAITING_FOR_PLAYERS){

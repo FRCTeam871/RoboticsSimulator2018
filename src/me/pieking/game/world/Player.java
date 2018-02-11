@@ -16,11 +16,13 @@ import java.awt.geom.NoninvertibleTransformException;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.geom.RoundRectangle2D;
+import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
+import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.List;
 
@@ -182,9 +184,11 @@ public class Player {
     		if(this == Game.getWorld().getSelfPlayer()){
     			tickControls();
     		}else {
-    			base.setLinearVelocity(activeLinearX * 1.5, activeLinearY * 1.5);
+    			base.setLinearVelocity(activeLinearX * 5, activeLinearY * 5);
     			base.setAngularVelocity(activeAngularRot * 3.5);
     		}
+
+//    		base.applyForce(new Vector2(1000, 0));
     		
     		List<Torque> torque = new ArrayList<Torque>();
     		torque.addAll(torquequeue);
@@ -361,6 +365,7 @@ public class Player {
 			}
     		
     		double speedMultiplier = Game.keyHandler().isPressed(KeyEvent.VK_SHIFT) ? 5 : 1;
+    		speedMultiplier *= 5;
     		
     		double mechPower = 110 * speedMultiplier;
     		
@@ -413,7 +418,7 @@ public class Player {
     			
         			double rot = cont.rightStickX;
         			if(Math.abs(rot) < 0.25) rot = 0;
-        			base.applyTorque(200 * rot);
+        			base.applyTorque(200 * rot * speedMultiplier);
     			}
     			
     			boolean nowAPressed = cont.rb;
@@ -470,12 +475,50 @@ public class Player {
         		}else if(Game.keyHandler().isPressed(KeyEvent.VK_RIGHT)){
         			base.applyTorque(200 * speedMultiplier);
         		}else{
-        			base.setAngularVelocity(base.getAngularVelocity() * 0.001);
+//        			base.setAngularVelocity(base.getAngularVelocity() * 0.7);
         		}
     		}
+    		
+    		// claw height
+    		
+			float liftFactor = 48f;
+			
+			if(isClimbing()) liftFactor *= 4;
+			
+			double newHeight = height;
+			
+			if(Game.keyHandler().isPressed(KeyEvent.VK_UP)){
+				newHeight = Math.max(0f, Math.min(height + (1 / liftFactor), 1f));
+			}else if(Game.keyHandler().isPressed(KeyEvent.VK_DOWN)){
+				newHeight = Math.max(0f, Math.min(height - (1 / liftFactor), 1f));
+			}
+			
+//			System.out.println(newHeight);
+			
+			ClawGrabberComponent claw = null;
+			for(Component c : robot.getComponents()) {
+				if(c instanceof ClawGrabberComponent) {
+					claw = (ClawGrabberComponent)c;
+				}
+			}
+			
+			if(claw != null) {
+				if(Game.getWorld().isInClimbRange(claw, team)) {
+					if(newHeight < height && height >= 0.98) {
+						setClimbing(true);
+					}else if(newHeight > height && newHeight >= 0.98) {
+						setClimbing(false);
+					}
+				}else {
+					setClimbing(false);
+				}
+			}
+			
+			height = newHeight; 
+    		
 		}
 //		
-		if(Game.getTime() % 10 == 0 && !dead){
+		if(Game.getTime() % 5 == 0 && !dead){
 			sendServerMotion();
 		}
 //		
@@ -552,8 +595,10 @@ public class Player {
 	}
 
 	public void sendServerMotion() {
+		System.out.println("serv");
 //		System.out.println(base.getTransform().getTranslation().x + " " + base.getTransform().getTranslation().y);
 		PlayerUpdatePacket pack = new PlayerUpdatePacket(name, base.getWorldCenter().x + "", base.getWorldCenter().y + "", base.getLinearVelocity().x + "", base.getLinearVelocity().y + "", base.getTransform().getRotation() + "", base.getAngularVelocity()*2 + "");
+		System.out.println(pack.toString());
 		Game.sendPacket(pack);
 	}
 
@@ -792,16 +837,36 @@ public class Player {
 		
 		joints.clear();
 		
+		List<BodyFixture> fix = robot.constructFixtures();
 		bods = robot.construct();
+		GameObject allColl = new GameObject();
 		
-//		List<BodyFixture> fix = robot.constructFixtures();
-//		GameObject allColl = new GameObject();
-//		
-//		for(BodyFixture f : fix) {
-//			allColl.addFixture(f);
-//		}
-//		
-//		base = allColl;
+		for(BodyFixture f : fix) {
+			System.out.println(f.createMass().getMass());
+			allColl.addFixture(f);
+		}
+		
+		allColl.setMass(MassType.NORMAL);
+		
+		double rot = getRotation();
+//		allColl.translate(base.getWorldCenter());
+		if(base != null) {
+			
+			while(Game.getWorld().getWorld().containsBody(base)) {
+				try {
+					Game.getWorld().getWorld().removeBody(base);
+				}catch(ConcurrentModificationException e) {}
+			}
+			
+			allColl.translateToOrigin();
+			allColl.translate(base.getWorldCenter());
+		}
+		base = allColl;
+		base.setAngularDamping(GameWorld.getAngularDamping() * 0.75);
+		base.setLinearDamping(GameWorld.getLinearDamping());
+		Game.getWorld().getWorld().addBody(base);
+		setRotation(0);
+//		translateToOrigin();
 		
 //		System.out.println(bods);
 		
@@ -811,6 +876,10 @@ public class Player {
 //		base.getTransform().setRotation(0);
 		
 		for(GameObject b : bods){
+			
+			for(BodyFixture bf : b.getFixtures()) {
+				bf.setSensor(true);
+			}
 			
 			WeldJoint wj = new WeldJoint(b, base, base.getWorldCenter());
 			wj.setCollisionAllowed(false);
@@ -936,30 +1005,42 @@ public class Player {
 	}
 
 	public Robot selectShip() {
-		JFileChooser chooser = new JFileChooser();
-		chooser.setAccessory(new ShipFileAccessory(chooser));
-		chooser.setFileView(new ShipFileView());
-		FileNameExtensionFilter filter = new FileNameExtensionFilter("ROBOT Files", "rob");
-	    chooser.addChoosableFileFilter(filter);
-	    chooser.setCurrentDirectory(FileSystem.getFolder("robots"));
-	    chooser.setAcceptAllFileFilterUsed(true);
-	    chooser.setMultiSelectionEnabled(false);
-	    chooser.setPreferredSize(new Dimension(500, 600));
-	    int returnVal = chooser.showOpenDialog(null);
-	    if(returnVal == JFileChooser.APPROVE_OPTION) {
-	    	try {
-	    		return Robot.load(chooser.getSelectedFile(), this);
+		if(Game.QUICK_CONNECT) {
+			File f = FileSystem.getFile("robots/default.rob");
+			
+			try {
+	    		return Robot.load(f, this);
 			}catch (Exception e) {
 				e.printStackTrace();
 			}
-	    }else{
-	    	try {
-	    		return Robot.load("new", this);
-			}catch (Exception e) {
-				e.printStackTrace();
-			}
-	    }
-		return robot;
+			
+			return robot;
+		}else {
+    		JFileChooser chooser = new JFileChooser();
+    		chooser.setAccessory(new ShipFileAccessory(chooser));
+    		chooser.setFileView(new ShipFileView());
+    		FileNameExtensionFilter filter = new FileNameExtensionFilter("ROBOT Files", "rob");
+    	    chooser.addChoosableFileFilter(filter);
+    	    chooser.setCurrentDirectory(FileSystem.getFolder("robots"));
+    	    chooser.setAcceptAllFileFilterUsed(true);
+    	    chooser.setMultiSelectionEnabled(false);
+    	    chooser.setPreferredSize(new Dimension(500, 600));
+    	    int returnVal = chooser.showOpenDialog(null);
+    	    if(returnVal == JFileChooser.APPROVE_OPTION) {
+    	    	try {
+    	    		return Robot.load(chooser.getSelectedFile(), this);
+    			}catch (Exception e) {
+    				e.printStackTrace();
+    			}
+    	    }else{
+    	    	try {
+    	    		return Robot.load("new", this);
+    			}catch (Exception e) {
+    				e.printStackTrace();
+    			}
+    	    }
+    		return robot;
+		}
 	}
 
 	public Robot getRobot() {
@@ -1021,6 +1102,7 @@ public class Player {
 	}
 
 	public boolean isInContact(PowerCube cube) {
+		if(robot == null) return false;
 		for(Component c : robot.getComponents()) {
 			if(c.lastBody.isInContact(cube.base)) {
 				return true;

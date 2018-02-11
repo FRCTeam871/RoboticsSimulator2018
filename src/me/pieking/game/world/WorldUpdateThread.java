@@ -2,6 +2,8 @@ package me.pieking.game.world;
 
 import org.dyn4j.dynamics.World;
 
+import me.pieking.game.Game;
+
 public class WorldUpdateThread extends Thread {
 
 	private World world;
@@ -36,11 +38,14 @@ public class WorldUpdateThread extends Thread {
 	}
 	
 	public void queueUpdate() {
-//		updates++;
-		try{
-			world.update(1d/60d);
-		}catch(Exception e){
-			e.printStackTrace();
+		if(Game.isServer()) {
+			updates++;
+		}else {
+			try{
+				world.update(1d/60d);
+			}catch(Exception e){
+				e.printStackTrace();
+			}
 		}
 	}
 	

@@ -46,7 +46,8 @@ public class ClientStarter {
 //			}
 //		}).start();
 		
-		String rawip = JOptionPane.showInputDialog("Enter an IP: ", "localhost:1341"); //47.18.146.218
+		String rawip = "localhost:1341"; //47.18.146.218
+		if(!Game.QUICK_CONNECT) rawip = JOptionPane.showInputDialog("Enter an IP: ", "localhost:1341"); //47.18.146.218
 		
 		String ip = rawip.split(":")[0];
 		int port = Integer.parseInt(rawip.split(":")[1]);

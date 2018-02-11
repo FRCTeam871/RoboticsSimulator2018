@@ -137,11 +137,15 @@ public class Robot {
 	
 	public void keyPressed(KeyEvent e){
 		if(pl.dead) return;
+		if(!enabled) return;
+		if(!canMove) return;
 		if(pl.hasFocus()){
+			boolean action = false;
     		for(Component c : comp){
     			if(c instanceof ActivatableComponent){
     				ActivatableComponent ac = (ActivatableComponent) c;
     				if(ac.actKeys.contains(e.getKeyCode())) {
+    					action = true;
     					
     					if(ac.toggleMode) {
     						ac.toggle();
@@ -161,16 +165,22 @@ public class Robot {
     				}
     			}
     		}
+    		
+//    		if(action) pl.constructShip();
 		}
 	}
 	
 	public void keyReleased(KeyEvent e){
 		if(pl.dead) return;
+		if(!enabled) return;
+		if(!canMove) return;
 		if(pl.hasFocus()){
+			boolean action = false;
     		for(Component c : comp){
     			if(c instanceof ActivatableComponent){
     				ActivatableComponent ac = (ActivatableComponent) c;
     				if(ac.deactKeys.contains(e.getKeyCode()) && !ac.toggleMode) {
+    					action = true;
     					ac.deactivate();
     					if(pl == Game.getWorld().getSelfPlayer()){
     						ShipComponentActivatePacket scap = new ShipComponentActivatePacket(pl.name, ac.bounds.x + "", ac.bounds.y + "", false + "");
@@ -179,6 +189,7 @@ public class Robot {
     				}
     			}
     		}
+//    		if(action) pl.constructShip();
 		}
 	}
 	
@@ -191,7 +202,7 @@ public class Robot {
 				System.out.println("==================");
 				System.out.println("= Critical Error =");
 				System.out.println("==================");
-				pl.constructShip();
+//				pl.constructShip();
 			}
 			
 			
@@ -201,6 +212,7 @@ public class Robot {
 				System.out.println("==================");
 				System.out.println("= Critical Error =");
 				System.out.println("==================");
+				pl.base = new GameObject();
 				pl.constructShip();
 //				pl.base.setTransform(new Transform());
 //				bod.setTransform(new Transform());

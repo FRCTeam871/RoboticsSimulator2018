@@ -86,7 +86,7 @@ public class Vault {
 					break;
 			}
 			
-		}else if((!nowMousePressed && wasMousePressed && draggingCube) || (cont.isConnected && !cont.start && draggingCube)) {
+		}else if((!nowMousePressed && wasMousePressed && draggingCube) || (cont.isConnected && false && !cont.start && draggingCube)) {
 			draggingCube = false;
 			
 			switch(hoverVault) {
@@ -164,7 +164,7 @@ public class Vault {
 			if(visibilityTimer > 2) visibilityTimer--;
 		}
 		
-		if(cont.isConnected && draggingCube) {
+		if(cont.isConnected && false && draggingCube) {
 			int newHover = -1;
 			
 			if(cont.dpadLeft) {
@@ -182,7 +182,7 @@ public class Vault {
 			if(cont.dpadDownJustPressed) {
 				controllerCubePlaceToggle = !controllerCubePlaceToggle;
 			}
-		}else if(cont.isConnected && cont.back) {
+		}else if(cont.isConnected && false && cont.back) {
 			if(cont.dpadLeft) {
 				Game.getWorld().useForce(team);
 			}else if(cont.dpadUp) {

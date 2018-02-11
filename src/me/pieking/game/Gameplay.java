@@ -93,7 +93,7 @@ public class Gameplay {
 				
 				break;
 			case SETUP:
-				if(gameTime <= 0){
+				if(gameTime <= 0 || Game.GAMEPLAY_DEBUG){
 					setState(GameState.AUTON);
 				}
 				
@@ -339,24 +339,25 @@ public class Gameplay {
     		g.drawString("" + blueScore, Game.getWidth()/2 + (colonWidth), scoreBoardY);
     		
     		// lifter height
-    		
-    		double roboHeight = 0.0;
-    		if(Game.getWorld().getSelfPlayer().isClimbing()) {
-    			roboHeight = 1 - Game.getWorld().getSelfPlayer().getHeight();
+    		if(!Game.isServer()) {
+    			double roboHeight = 0.0;
+        		if(Game.getWorld().getSelfPlayer().isClimbing()) {
+        			roboHeight = 1 - Game.getWorld().getSelfPlayer().getHeight();
+        		}
+        		
+        		g.setColor(Color.DARK_GRAY);
+        		g.fillRect(Game.getWidth() - 20, Game.getHeight() - 250 -(int)(100 * roboHeight), 10, 110);
+        		
+        		double clawHeight = Game.getWorld().getSelfPlayer().getHeight();
+        		
+        		if(roboHeight > 0) clawHeight = 1;
+        		
+        		g.setColor(Color.LIGHT_GRAY);
+        		g.fillRect(Game.getWidth() - 20 - 50, Game.getHeight() - 250 + 100-(int)(100 * clawHeight), 50, 10);
+        		
+        		g.setColor(Color.LIGHT_GRAY);
+        		g.fillRect(Game.getWidth() - 20 - 50 + 10, Game.getHeight() - 250 + 10 + 100-(int)(100 * roboHeight), 50, 50);
     		}
-    		
-    		g.setColor(Color.DARK_GRAY);
-    		g.fillRect(Game.getWidth() - 20, Game.getHeight() - 250 -(int)(100 * roboHeight), 10, 110);
-    		
-    		double clawHeight = Game.getWorld().getSelfPlayer().getHeight();
-    		
-    		if(roboHeight > 0) clawHeight = 1;
-    		
-    		g.setColor(Color.LIGHT_GRAY);
-    		g.fillRect(Game.getWidth() - 20 - 50, Game.getHeight() - 250 + 100-(int)(100 * clawHeight), 50, 10);
-    		
-    		g.setColor(Color.LIGHT_GRAY);
-    		g.fillRect(Game.getWidth() - 20 - 50 + 10, Game.getHeight() - 250 + 10 + 100-(int)(100 * roboHeight), 50, 50);
     		
 		}
 		
@@ -422,12 +423,13 @@ public class Gameplay {
 					Player p = redPlayers.get(i);
 					p.setLocation(redSpawns[i], Math.toRadians(90));
 				}
+				
 				for(int i = 0; i < Math.min(bluePlayers.size(), 3); i++){
 					Player p = bluePlayers.get(i);
 					p.setLocation(blueSpawns[i], Math.toRadians(-90));
 				}
 				
-				if(!Game.isServer()) {
+				if(!Game.isServer() && !Game.GAMEPLAY_DEBUG) {
 					Game.getWorld().getSelfPlayer().getRobot().setAutonScript(null);
     				SelectScriptMenu ssm = new SelectScriptMenu(Game.getWorld().getSelfPlayer().getRobot());
     				Render.showMenu(ssm);

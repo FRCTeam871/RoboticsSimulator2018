@@ -382,7 +382,8 @@ public class GameWorld {
 	 */
 	public void addPlayer(Player pl) {
 		players.add(pl);
-		getWorld().addBody(pl.base);
+//		pl.constructShip();
+//		getWorld().addBody(pl.base);
 	}
 
 	/**
@@ -585,7 +586,7 @@ public class GameWorld {
 		
 		if(cameraCentered || Game.isServer()){
 			
-			GameObject.SCALE = 24;
+//			GameObject.SCALE = 24;
 			
 			int fw = (int)(getFieldImage().getWidth() * GameObject.SCALE * 0.05 * FIELD_SCALE);
 			int fh = (int)(getFieldImage().getHeight() * GameObject.SCALE * 0.05 * FIELD_SCALE);

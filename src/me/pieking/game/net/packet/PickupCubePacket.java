@@ -27,10 +27,10 @@ public class PickupCubePacket extends Packet {
 		if(p != null){
 			PowerCube c = Game.getWorld().getPowerCube(id);
 			if(c != null){
-				Game.getWorld().removeCube(c);
+//				Game.getWorld().removeCube(c);
 				for(Component co : p.getRobot().getComponents()) {
 					if(co instanceof ClawGrabberComponent) {
-						((ClawGrabberComponent) co).setHasCube(true);
+						((ClawGrabberComponent) co).grabCube(c);
 					}
 				}
 			}

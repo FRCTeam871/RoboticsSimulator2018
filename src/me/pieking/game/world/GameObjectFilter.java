@@ -68,7 +68,7 @@ public class GameObjectFilter implements Filter{
 		
 		public boolean collidesWith(FilterType f){
 			for(FilterType fi : coll){
-				if(f == POWER_CUBE_HOLDING_GROUND) System.out.println(f + " " + fi);
+//				if(f == POWER_CUBE_HOLDING_GROUND) System.out.println(f + " " + fi);
 				if(fi == f){
 					return true;
 				}
