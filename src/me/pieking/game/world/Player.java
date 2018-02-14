@@ -184,8 +184,9 @@ public class Player {
     		if(this == Game.getWorld().getSelfPlayer()){
     			tickControls();
     		}else {
-    			base.setLinearVelocity(activeLinearX * 5, activeLinearY * 5);
-    			base.setAngularVelocity(activeAngularRot * 3.5);
+//    			System.out.println(activeLinearY);
+    			base.setLinearVelocity(activeLinearX * 1, activeLinearY * 1);
+    			base.setAngularVelocity(activeAngularRot * 1);
     		}
 
 //    		base.applyForce(new Vector2(1000, 0));

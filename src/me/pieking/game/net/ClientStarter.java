@@ -1,13 +1,10 @@
 package me.pieking.game.net;
 
-import java.awt.AWTException;
-import java.awt.MouseInfo;
 import java.lang.reflect.InvocationTargetException;
 
 import javax.swing.JOptionPane;
 
 import com.jmr.wrapper.client.Client;
-import com.studiohartman.jamepad.ControllerState;
 
 import me.pieking.game.Game;
 import me.pieking.game.net.packet.JoinPacket;
@@ -46,8 +43,8 @@ public class ClientStarter {
 //			}
 //		}).start();
 		
-		String rawip = "localhost:1341"; //47.18.146.218
-		if(!Game.QUICK_CONNECT) rawip = JOptionPane.showInputDialog("Enter an IP: ", "localhost:1341"); //47.18.146.218
+		String rawip = "localhost:" + ServerStarter.DEFAULT_PORT; //47.18.146.218
+		if(!Game.QUICK_CONNECT) rawip = JOptionPane.showInputDialog("Enter an IP: ", "localhost:" + ServerStarter.DEFAULT_PORT); //47.18.146.218
 		
 		String ip = rawip.split(":")[0];
 		int port = Integer.parseInt(rawip.split(":")[1]);

@@ -910,8 +910,8 @@ public class GameWorld {
 	 */
 	public void removeCube(PowerCube cube) {
 		cubes.remove(cube);
-		getWorld().removeBody(cube.base);
 		exchanging.remove(cube);
+		getWorld().removeBody(cube.base);
 	}
 	
 	/**

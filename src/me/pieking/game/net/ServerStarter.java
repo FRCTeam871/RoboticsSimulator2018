@@ -21,6 +21,8 @@ import me.pieking.game.world.Player;
 
 public class ServerStarter {
 
+	public static final int DEFAULT_PORT = 50001;
+	
 	public static ServerStarter serverStarter;
 	
 	private Server server;
@@ -33,7 +35,7 @@ public class ServerStarter {
 	
 	private ServerStarter() {
 		try {
-			server = new Server(1341, 1341);
+			server = new Server(DEFAULT_PORT, DEFAULT_PORT);
 			server.setListener(new ServerListener(this));
 			if (server.isConnected()) {
 				System.out.println("Started server successfully.");

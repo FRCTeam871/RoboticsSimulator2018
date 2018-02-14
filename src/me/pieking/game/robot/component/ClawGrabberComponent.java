@@ -40,10 +40,12 @@ public class ClawGrabberComponent extends ActivatableComponent {
 	
 	double holdingAngle;
 	
-	boolean setCube = true;
+	boolean setCube = false;
 	
 	WeldJoint weld = null;
 	PowerCube cube = null;
+	
+	FilterType lastFilter = null;
 	
 	public ClawGrabberComponent(int x, int y, int rot) {
 		super(x, y, 2, 1, rot, 100);
@@ -168,8 +170,8 @@ public class ClawGrabberComponent extends ActivatableComponent {
             						
             						cube = c;
             						cube.base.setMass(new Mass(cube.base.getLocalCenter(), 0.1, 0.1));
-            						weld = new WeldJoint(lastBody, c.base, lastBody.getLocalCenter());
-            						Game.getWorld().getWorld().addJoint(weld);
+//            						weld = new WeldJoint(lastBody, c.base, lastBody.getLocalCenter());
+//            						Game.getWorld().getWorld().addJoint(weld);
             						
                 					setHasCube(true);
                 					break;
@@ -223,7 +225,7 @@ public class ClawGrabberComponent extends ActivatableComponent {
     			double r = tra.getRotation() - Math.toRadians(90);
     			this.cube.base.getFixture(0).setFilter(new GameObjectFilter(FilterType.POWER_CUBE));
     			this.cube.base.applyForce(new Vector2(unitSize * Math.cos(r), unitSize * Math.sin(r)).multiply(500));
-    			this.cube.base.setMass(MassType.NORMAL);
+//    			this.cube.base.setMass(MassType.NORMAL);
 //    			Game.getWorld().addPowerCube(this.cube);
 			}
 			
@@ -233,49 +235,60 @@ public class ClawGrabberComponent extends ActivatableComponent {
 	
 	public void updateCollision(){
 //		System.out.println("upd");
-		lastBody.removeAllFixtures();
+		
 		if(hasCube && cube != null){
-			Rectangle r = new Rectangle(unitSize * 2, unitSize / 8);
-			r.translate(unitSize/2, unitSize/2);
-			BodyFixture bf = new BodyFixture(r);
-			bf.setFilter(new PlayerFilter(pl));
-//			bf.setDensity(0.01);
-			lastBody.addFixture(bf);
-			
-//			r = new Rectangle(unitSize / 8, unitSize * .75);
-//			r.translate(-unitSize/2, unitSize / 8);
-//			bf = new BodyFixture(r);
-//			bf.setFilter(new PlayerFilter(pl));
-//			lastBody.addFixture(bf);
-//			
-//			r = new Rectangle(unitSize / 8, unitSize * .75);
-//			r.translate(unitSize/2 + unitSize, unitSize / 8);
-//			bf = new BodyFixture(r);
-//			bf.setFilter(new PlayerFilter(pl));
-//			lastBody.addFixture(bf);
 			
 			double height = pl.getHeight();
-//			System.out.println(height);
+			FilterType type = FilterType.POWER_CUBE_HOLDING_GROUND;
 			
-			Rectangle r2 = new Rectangle((unitSize * 2) * 0.8, (unitSize * 2) * 0.8);
-			r2.translate(unitSize/2, unitSize/2 - unitSize);
-			BodyFixture bf2 = new BodyFixture(r2);
 			if(height > 0.9) {
-				bf2.setFilter(new GameObjectFilter(FilterType.POWER_CUBE_HOLDING_HIGH));
+				type = FilterType.POWER_CUBE_HOLDING_HIGH;
 			}else if(height > 0.2) {
-				bf2.setFilter(new GameObjectFilter(FilterType.POWER_CUBE_HOLDING_LOW));
+				type =FilterType.POWER_CUBE_HOLDING_LOW;
 			}else {
-//				System.out.println("ground");
-				bf2.setFilter(new GameObjectFilter(FilterType.POWER_CUBE_HOLDING_GROUND));
+				type = FilterType.POWER_CUBE_HOLDING_GROUND;
 			}
 			
-//			WeldJoint wj = new WeldJoint(lastBody, dummyCube.base, lastBody.getLocalCenter());
+			if(type != lastFilter) {
+				
+				lastFilter = type;
+				
+				lastBody.removeAllFixtures();
 			
-			if(cube != null) cube.base.getFixture(0).setFilter(bf2.getFilter());
+    			Rectangle r = new Rectangle(unitSize * 2, unitSize / 8);
+    			r.translate(unitSize/2, unitSize/2);
+    			BodyFixture bf = new BodyFixture(r);
+    			bf.setFilter(new PlayerFilter(pl));
+    //			bf.setDensity(0.01);
+    			lastBody.addFixture(bf);
+    			
+    			r = new Rectangle(unitSize / 8, unitSize * .75);
+    			r.translate(-unitSize/2, unitSize / 8);
+    			bf = new BodyFixture(r);
+    			bf.setFilter(new PlayerFilter(pl));
+    			lastBody.addFixture(bf);
+    			
+    			r = new Rectangle(unitSize / 8, unitSize * .75);
+    			r.translate(unitSize/2 + unitSize, unitSize / 8);
+    			bf = new BodyFixture(r);
+    			bf.setFilter(new PlayerFilter(pl));
+    			lastBody.addFixture(bf);
+    			
+    			Rectangle r2 = new Rectangle((unitSize * 2) * 0.8, (unitSize * 2) * 0.8);
+    			r2.translate(unitSize/2, unitSize/2 - unitSize);
+    			BodyFixture bf2 = new BodyFixture(r2);
+    			bf2.setFilter(new GameObjectFilter(type));
+    			
+    //			WeldJoint wj = new WeldJoint(lastBody, dummyCube.base, lastBody.getLocalCenter());
+    			
+    			if(cube != null) cube.base.getFixture(0).setFilter(bf2.getFilter());
 			
+			}
 //			lastBody.addFixture(bf2);
 			
 		}else{
+			lastBody.removeAllFixtures();
+			
 			Rectangle r = new Rectangle(unitSize * 2, unitSize / 8);
 			r.translate(unitSize/2, unitSize/2);
 			BodyFixture bf = new BodyFixture(r);
@@ -311,7 +324,9 @@ public class ClawGrabberComponent extends ActivatableComponent {
 			tra.translate(unitSize * Math.cos(r), unitSize * Math.sin(r));
 			dummyCube.base.setTransform(tra);
 			dummyCube.base.rotate(-Math.toRadians(holdingAngle), dummyCube.base.getWorldCenter());
-//			dummyCube.render(g);
+			
+			if(cube != null) cube.base.setTransform(dummyCube.base.getTransform());
+			dummyCube.render(g);
 		}
 		
 	}
@@ -320,8 +335,9 @@ public class ClawGrabberComponent extends ActivatableComponent {
 		System.out.println("grab: " + c.getId());
 		cube = c;
 		cube.base.setMass(new Mass(cube.base.getLocalCenter(), 0.1, 0.1));
-		weld = new WeldJoint(lastBody, c.base, lastBody.getLocalCenter());
-		Game.getWorld().getWorld().addJoint(weld);
+		Game.getWorld().removeCube(cube);
+//		weld = new WeldJoint(lastBody, c.base, lastBody.getLocalCenter());
+//		Game.getWorld().getWorld().addJoint(weld);
 		
 		setHasCube(true);
 	}

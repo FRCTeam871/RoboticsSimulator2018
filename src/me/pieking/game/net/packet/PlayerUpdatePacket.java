@@ -21,6 +21,11 @@ public class PlayerUpdatePacket extends Packet {
 		this.ya = Float.parseFloat(ya);
 		this.rot = Float.parseFloat(rot);
 		this.rotA = Float.parseFloat(rotA);
+		
+		
+		if(Math.abs(this.xa) < 0.01) this.xa = 0;
+		if(Math.abs(this.ya) < 0.01) this.ya = 0;
+		if(Math.abs(this.rotA) < 0.01) this.rotA = 0;
 	}
 
 	@Override
