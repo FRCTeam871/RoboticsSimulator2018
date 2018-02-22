@@ -24,6 +24,7 @@ import javax.swing.Timer;
 import com.studiohartman.jamepad.ControllerManager;
 import com.studiohartman.jamepad.ControllerState;
 import com.studiohartman.jamepad.ControllerUnpluggedException;
+import com.sun.java.swing.plaf.windows.resources.windows;
 
 import me.pieking.game.events.KeyHandler;
 import me.pieking.game.events.MouseHandler;
@@ -50,9 +51,9 @@ import me.pieking.game.world.PowerCube;
 public class Game {
 
 	/** The width of the window content, in pixels. */
-	private static final int WIDTH = 800;
+	private static int WIDTH = 800;
 	/** The height of the window content, in pixels. */
-	private static final int HEIGHT = 600;
+	private static int HEIGHT = 600;
 	
 	/** The name of the game. */
 	private static final String NAME = "Robotics Simulator 2018";
@@ -175,6 +176,24 @@ public class Game {
     		controllerManager = new ControllerManager();
     		controllerManager.initSDLGamepad();
     		state = controllerManager.getState(0);
+		}
+		
+		if(isServer()) {
+			
+			boolean smallServer = true;
+			
+			if(smallServer) {
+    			HEIGHT = 400;
+    			GameObject.SCALE = 15.3;
+    			GameObject.DESIRED_SCALE = 15.3;
+			}else {
+				HEIGHT = 600;
+				GameObject.SCALE = 23;
+				GameObject.DESIRED_SCALE = 23;
+			}
+			
+			WIDTH = (int) (HEIGHT * 2.4625);
+			
 		}
 		
 //		try {

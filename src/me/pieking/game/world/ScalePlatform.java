@@ -111,6 +111,7 @@ public class ScalePlatform {
 		int ct = 0;
 		List<PowerCube> cub = Game.getWorld().getCubes();
 		for(PowerCube p : cub) {
+			if(p.holding) continue; // don't count the cube if it's being held
 			if(base.contains(p.base.getWorldCenter())) {
 				ct++;
 			}

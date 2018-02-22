@@ -109,7 +109,7 @@ public class ClientStarter {
 			System.out.println(msg);
 		}
 		
-		System.out.println(msg);
+//		System.out.println(msg);
 		
 		Game.queuePacket(p);
 		

@@ -21,6 +21,8 @@ public class GameObjectFilter implements Filter{
 				if(pl != null && pl.noClip) return false;
 			}
 			
+//			if(this.type == FilterType.SHIP)System.out.println(this.type + " " + f.type + " " + this.type.collidesWith(f.type));
+			
 			if(this.type.collidesWith(f.type)){
 				return true;
 			}else{
@@ -38,7 +40,7 @@ public class GameObjectFilter implements Filter{
 		POWER_CUBE_HOLDING_GROUND 	("SHIP", "POWER_CUBE", "SCALE_PLATFORM", "SWITCH_PLATFORM", "POWER_CUBE_HOLDING_GROUND"),
 		POWER_CUBE_HOLDING_LOW	  	("SHIP", "SCALE_PLATFORM"),
 		POWER_CUBE_HOLDING_HIGH	 	("SHIP"),
-		SHIP						("SHIP", "POWER_CUBE"),
+		SHIP						("SHIP", "POWER_CUBE", "SCALE_PLATFORM", "SWITCH_PLATFORM"),
 		PARTICLE					(),
 		SCALE_PLATFORM_CENTER 		("SHIP", "POWER_CUBE_HOLDING_GROUND", "POWER_CUBE_HOLDING_LOW"),
 		SCALE_PLATFORM 				("SHIP", "POWER_CUBE", "POWER_CUBE_HOLDING_GROUND", "POWER_CUBE_HOLDING_LOW"),

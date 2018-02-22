@@ -35,6 +35,8 @@ public class CubeUpdatePacket extends Packet {
 //		System.out.println(p);
 		if(c != null){
 			
+			if(c.holding) return;
+			
 //			float rot = Game.getTime() / 60f;
 			
 			c.base.translateToOrigin();

@@ -26,6 +26,8 @@ import me.pieking.game.gfx.LEDStrip;
 import me.pieking.game.gfx.Sprite;
 import me.pieking.game.net.ServerStarter;
 import me.pieking.game.net.packet.AddCubePacket;
+import me.pieking.game.net.packet.SwitchOrientationPacket;
+import me.pieking.game.net.packet.UpdateScorePacket;
 import me.pieking.game.robot.Robot;
 import me.pieking.game.robot.component.Component;
 import me.pieking.game.world.Balance.Team;
@@ -336,26 +338,20 @@ public class GameWorld {
     		addPowerCubeIntoZone(Team.BLUE, new PowerCube(15.3 - PowerCube.SIZE - PowerCube.SIZE + fieldXofs, 0.79 - PowerCube.SIZE/2 - PowerCube.SIZE/2 + fieldYofs, 0));
 		}
 		
+		teamProperties.put(Team.RED, new TeamProperties());
+		teamProperties.put(Team.BLUE, new TeamProperties());
+		
+		getProperties(Team.RED).setExchangeSensor(redExchangeSensor);
+		getProperties(Team.RED).setVault(new Vault(Team.RED));
+		
+		getProperties(Team.BLUE).setExchangeSensor(blueExchangeSensor);
+		getProperties(Team.BLUE).setVault(new Vault(Team.BLUE));
+		
 		// create the switches with a random one of the possible orientations
 		
 		boolean[] switchOrientation = getRandomSwitchOrientation();
 		
-		LEDStrip srr = new LEDStrip(50);
-		LEDStrip srb = new LEDStrip(50);
-		LEDStrip sbr = new LEDStrip(50);
-		LEDStrip sbb = new LEDStrip(50);
-		LEDStrip sr = new LEDStrip(50);
-		LEDStrip sb = new LEDStrip(50);
-		
-		Switch blueSwitch = new Switch(10.15 + fieldXofs, 0 + fieldYofs, switchOrientation[0], sbr, sbb);
-		addScale(blueSwitch);
-		this.scale = new Scale(0.07 + fieldXofs, 0 + fieldYofs, switchOrientation[1], sr, sb);
-		addScale(this.scale);
-		Switch redSwitch = new Switch(-10.15 + fieldXofs, 0 + fieldYofs, switchOrientation[2], srr, srb);
-		addScale(redSwitch);
-
-		teamProperties.put(Team.RED, new TeamProperties(redSwitch, redExchangeSensor, new Vault(Team.RED)));
-		teamProperties.put(Team.BLUE, new TeamProperties(blueSwitch, blueExchangeSensor, new Vault(Team.BLUE)));
+		setSwitchOrientation(switchOrientation);
 		
 	}
 	
@@ -376,6 +372,52 @@ public class GameWorld {
 		return poss.get(Rand.range(0, poss.size()-1));
 	}
 
+	public void setSwitchOrientation(boolean[] switchOrientation) {
+		
+		
+//		scales.add(balance);
+//		getWorld().addBody(balance.walls);
+//		walls.add(balance.walls);
+//		scalePlatforms.add(balance.getRedPlatform());
+//		scalePlatforms.add(balance.getBluePlatform());
+//		getWorld().addBody(balance.getBluePlatform().base);
+//		getWorld().addBody(balance.getRedPlatform().base);
+		
+		if(Game.isServer()) {
+			SwitchOrientationPacket sop = new SwitchOrientationPacket(switchOrientation[0] + "", switchOrientation[1] + "", switchOrientation[2] + "");
+			ServerStarter.serverStarter.sendToAll(sop);
+		}
+		
+		List<Balance> bal = new ArrayList<Balance>();
+		bal.addAll(scales);
+		for(Balance b : bal) {
+			scales.remove(b);
+			getWorld().removeBody(b.walls);
+			walls.remove(b.walls);
+			scalePlatforms.remove(b.getBluePlatform());
+			scalePlatforms.remove(b.getRedPlatform());
+			getWorld().removeBody(b.getBluePlatform().base);
+			getWorld().removeBody(b.getRedPlatform().base);
+		}
+		
+		LEDStrip srr = new LEDStrip(50);
+		LEDStrip srb = new LEDStrip(50);
+		LEDStrip sbr = new LEDStrip(50);
+		LEDStrip sbb = new LEDStrip(50);
+		LEDStrip sr = new LEDStrip(50);
+		LEDStrip sb = new LEDStrip(50);
+		
+		Switch blueSwitch = new Switch(10.15 + fieldXofs, 0 + fieldYofs, switchOrientation[0], sbr, sbb);
+		addScale(blueSwitch);
+		this.scale = new Scale(0.07 + fieldXofs, 0 + fieldYofs, switchOrientation[1], sr, sb);
+		addScale(this.scale);
+		Switch redSwitch = new Switch(-10.15 + fieldXofs, 0 + fieldYofs, switchOrientation[2], srr, srb);
+		addScale(redSwitch);
+		
+		getProperties(Team.RED).setSwitch(redSwitch);
+		getProperties(Team.BLUE).setSwitch(blueSwitch);
+	}
+	
 	/**
 	 * Adds a {@link Player} to the world.
 	 * @param pl - the {@link Player} to add.
@@ -710,18 +752,25 @@ public class GameWorld {
     		}
     		
     		// update the scores for the switches and scale every second (once every 60 ticks)
-    		if(Game.getTime() % 60 == 0){
-    			for(Team team : getPlayingTeams()){
-    				if(getSwitch(team).getOwner() == team){
-    					TeamProperties tp = getProperties(team);
-    					tp.addScore(tp.getSwitchScoreMod());
-    	    		}
-    			}
-        		
-    			if(scale.getOwner() != Team.NONE){
-        			TeamProperties tp = getProperties(scale.getOwner());
-        			tp.addScore(tp.getScaleScoreMod());
-    			}
+    		if(Game.isServer() || !Game.isConnected()) {
+        		if(Game.getTime() % 60 == 0){
+        			for(Team team : getPlayingTeams()){
+        				if(getSwitch(team).getOwner() == team){
+        					TeamProperties tp = getProperties(team);
+        					tp.addScore(tp.getSwitchScoreMod());
+        	    		}
+        			}
+            		
+        			if(scale.getOwner() != Team.NONE){
+            			TeamProperties tp = getProperties(scale.getOwner());
+            			tp.addScore(tp.getScaleScoreMod());
+        			}
+        			
+        			if(Game.isServer()) {
+        				UpdateScorePacket usp = new UpdateScorePacket(getProperties(Team.RED).getScore() + "", getProperties(Team.BLUE).getScore() + "");
+        				ServerStarter.serverStarter.sendToAll(usp);
+        			}
+        		}
     		}
 		}
 		// update the players
@@ -926,8 +975,6 @@ public class GameWorld {
 		scalePlatforms.add(balance.getBluePlatform());
 		getWorld().addBody(balance.getBluePlatform().base);
 		getWorld().addBody(balance.getRedPlatform().base);
-		
-		
 	}
 	
 	/**

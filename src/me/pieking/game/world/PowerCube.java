@@ -35,6 +35,8 @@ public class PowerCube {
 	private int id;
 	
 	private List<Player> transitiveControllers = new ArrayList<>();
+
+	public boolean holding = false;
 	
 	public PowerCube(double x, double y, double angle) {
 		this(x, y, angle, ID++);

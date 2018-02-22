@@ -16,6 +16,7 @@ import me.pieking.game.gfx.Render;
 import me.pieking.game.menu.SelectScriptMenu;
 import me.pieking.game.net.ServerStarter;
 import me.pieking.game.net.packet.ChoseAutonPacket;
+import me.pieking.game.net.packet.PlayerUpdatePacket;
 import me.pieking.game.net.packet.SetStatePacket;
 import me.pieking.game.net.packet.VotePacket;
 import me.pieking.game.robot.Robot;
@@ -421,12 +422,12 @@ public class Gameplay {
 				
 				for(int i = 0; i < Math.min(redPlayers.size(), 3); i++){
 					Player p = redPlayers.get(i);
-					p.setLocation(redSpawns[i], Math.toRadians(90));
+					setLocation(p, redSpawns[i], Math.toRadians(90));
 				}
 				
 				for(int i = 0; i < Math.min(bluePlayers.size(), 3); i++){
 					Player p = bluePlayers.get(i);
-					p.setLocation(blueSpawns[i], Math.toRadians(-90));
+					setLocation(p, blueSpawns[i], Math.toRadians(-90));
 				}
 				
 				if(!Game.isServer() && !Game.GAMEPLAY_DEBUG) {
@@ -508,6 +509,14 @@ public class Gameplay {
 		
 	}
 	
+	private void setLocation(Player p, Point2D pt, double rot) {
+		p.setLocation(pt, rot);
+		if(Game.isServer()) {
+			PlayerUpdatePacket pup = p.createUpdatePacket();
+			ServerStarter.serverStarter.sendToAll(pup);
+		}
+	}
+
 	private void resetField() {
 		Game.getWorld().reset();
 	}

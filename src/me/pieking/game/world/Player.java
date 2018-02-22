@@ -596,11 +596,12 @@ public class Player {
 	}
 
 	public void sendServerMotion() {
-		System.out.println("serv");
-//		System.out.println(base.getTransform().getTranslation().x + " " + base.getTransform().getTranslation().y);
-		PlayerUpdatePacket pack = new PlayerUpdatePacket(name, base.getWorldCenter().x + "", base.getWorldCenter().y + "", base.getLinearVelocity().x + "", base.getLinearVelocity().y + "", base.getTransform().getRotation() + "", base.getAngularVelocity()*2 + "");
-		System.out.println(pack.toString());
+		PlayerUpdatePacket pack = createUpdatePacket();
 		Game.sendPacket(pack);
+	}
+	
+	public PlayerUpdatePacket createUpdatePacket() {
+		return new PlayerUpdatePacket(name, base.getWorldCenter().x + "", base.getWorldCenter().y + "", base.getLinearVelocity().x + "", base.getLinearVelocity().y + "", base.getTransform().getRotation() + "", base.getAngularVelocity()*2 + "", height + "", climbing + "");
 	}
 
 	public Location getLocation() {
@@ -1110,6 +1111,10 @@ public class Player {
 			}
 		}
 		return false;
+	}
+
+	public void setHeight(float height) {
+		this.height = height;
 	}
 	
 }

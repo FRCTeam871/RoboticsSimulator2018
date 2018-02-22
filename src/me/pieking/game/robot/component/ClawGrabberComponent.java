@@ -162,18 +162,11 @@ public class ClawGrabberComponent extends ActivatableComponent {
         //    					System.out.println(myAngle + " " + cubeAngle);
             					if(Math.abs(myAngle - cubeAngle) <= 10){
             						
-            						PickupCubePacket pcp = new PickupCubePacket(c.getId() + "", p.name);
+            						PickupCubePacket pcp = new PickupCubePacket(c.getId() + "", p.name, angleOfs + "");
             						Game.sendPacket(pcp);
             						
-            						holdingAngle = angleOfs;
-//                					Game.getWorld().removeCube(c);
+            						grabCube(c, angleOfs);
             						
-            						cube = c;
-            						cube.base.setMass(new Mass(cube.base.getLocalCenter(), 0.1, 0.1));
-//            						weld = new WeldJoint(lastBody, c.base, lastBody.getLocalCenter());
-//            						Game.getWorld().getWorld().addJoint(weld);
-            						
-                					setHasCube(true);
                 					break;
             					}
         					}
@@ -209,7 +202,7 @@ public class ClawGrabberComponent extends ActivatableComponent {
 	public void setHasCube(boolean cube){
 		System.out.println("setHasCube(" + cube + ");");
 		this.hasCube = cube;
-		if(Game.isServer() || !Game.isConnected() && !cube) {
+		if(!cube) {
 			if(weld != null) {
 				Game.getWorld().getWorld().removeJoint(weld);
 				System.out.println(weld);
@@ -221,10 +214,13 @@ public class ClawGrabberComponent extends ActivatableComponent {
 //			dummyCube.base.applyForce(new Vector2(unitSize * Math.cos(r), unitSize * Math.sin(r)).multiply(500));
 //			Game.getWorld().addPowerCube(dummyCube);
 			if(this.cube != null) {
+				System.out.println("drop cube");
+				this.cube.base.shouldRender = true;
+				this.cube.holding = false;
     			Transform tra = lastBody.getTransform().copy();
     			double r = tra.getRotation() - Math.toRadians(90);
     			this.cube.base.getFixture(0).setFilter(new GameObjectFilter(FilterType.POWER_CUBE));
-    			this.cube.base.applyForce(new Vector2(unitSize * Math.cos(r), unitSize * Math.sin(r)).multiply(500));
+    			this.cube.base.applyForce(new Vector2(unitSize * Math.cos(r), unitSize * Math.sin(r)).multiply(200));
 //    			this.cube.base.setMass(MassType.NORMAL);
 //    			Game.getWorld().addPowerCube(this.cube);
 			}
@@ -327,15 +323,20 @@ public class ClawGrabberComponent extends ActivatableComponent {
 			
 			if(cube != null) cube.base.setTransform(dummyCube.base.getTransform());
 			dummyCube.render(g);
+			
+//			cube.render(g);
 		}
 		
 	}
 
-	public void grabCube(PowerCube c) {
+	public void grabCube(PowerCube c, double rot) {
 		System.out.println("grab: " + c.getId());
 		cube = c;
 		cube.base.setMass(new Mass(cube.base.getLocalCenter(), 0.1, 0.1));
-		Game.getWorld().removeCube(cube);
+		cube.base.shouldRender = false;
+		cube.holding = true;
+//		Game.getWorld().removeCube(cube);
+		holdingAngle = rot;
 //		weld = new WeldJoint(lastBody, c.base, lastBody.getLocalCenter());
 //		Game.getWorld().getWorld().addJoint(weld);
 		
