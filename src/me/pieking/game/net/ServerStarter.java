@@ -80,9 +80,8 @@ public class ServerStarter {
 		
 		Packet p = (Packet) clazz.getConstructor(types).newInstance((Object[]) otherArgs);
 		
-		p.doAction();
-		
 		if(p instanceof JoinPacket){
+			p.doAction();
 			JoinPacket jp = (JoinPacket)p;
 			Player pl = jp.getCreated();
 			if(pl != null) {
@@ -130,7 +129,10 @@ public class ServerStarter {
 			//pl.respawn();
 			
 		}else if(p instanceof LeavePacket){
+			p.doAction();
 			from.close();
+		}else {
+			Game.queuePacket(p);
 		}
 		
 //		if(p instanceof SetLocationPacket){

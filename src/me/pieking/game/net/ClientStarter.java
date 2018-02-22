@@ -111,7 +111,7 @@ public class ClientStarter {
 		
 		System.out.println(msg);
 		
-		p.doAction();
+		Game.queuePacket(p);
 		
 	}
 	

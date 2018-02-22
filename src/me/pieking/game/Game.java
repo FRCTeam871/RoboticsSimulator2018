@@ -13,6 +13,7 @@ import java.awt.event.InputEvent;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.ImageIcon;
@@ -94,6 +95,8 @@ public class Game {
 	
 	public static final boolean QUICK_CONNECT = true;
 	public static final boolean GAMEPLAY_DEBUG = true;
+	
+	public static List<Packet> packetQueue = new ArrayList<Packet>();
 	
 	/**
 	 * Run the game with arguments
@@ -287,6 +290,13 @@ public class Game {
 	private static void tick(){
 		
 		frame.setTitle(NAME + (isServer() ? " (Server) " : "") + " v" + VERSION + " | " + fps + " FPS " + tps + " TPS");
+
+		List<Packet> pack = new ArrayList<Packet>();
+		pack.addAll(packetQueue);
+		for(Packet p : pack) {
+			p.doAction();
+		}
+		packetQueue.clear();
 		
 		state = controllerManager.getState(0);
 		
@@ -557,6 +567,10 @@ public class Game {
 			t.start();
 			
 		} catch (AWTException e1) {}
+	}
+
+	public static void queuePacket(Packet p) {
+		packetQueue.add(p);
 	}
 	
 }
