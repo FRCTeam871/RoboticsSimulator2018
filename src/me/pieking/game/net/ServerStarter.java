@@ -67,7 +67,7 @@ public class ServerStarter {
 		String[] args = msg.split("\\|");
 		
 		//System.out.println(msg);
-		System.out.println("server got " + msg);
+//		System.out.println("server got " + msg);
 		
 		String className = args[0];
 		Class<?> clazz = Class.forName("me.pieking.game.net.packet." + className);

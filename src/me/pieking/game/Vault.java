@@ -13,6 +13,9 @@ import com.studiohartman.jamepad.ControllerState;
 import me.pieking.game.gfx.Fonts;
 import me.pieking.game.gfx.Images;
 import me.pieking.game.gfx.Sprite;
+import me.pieking.game.net.packet.SetPowerupLevelPacket;
+import me.pieking.game.net.packet.UpdateCubeStoragePacket;
+import me.pieking.game.net.packet.UsePowerupPacket;
 import me.pieking.game.world.Balance.Team;
 import me.pieking.game.world.PowerCube;
 import me.pieking.game.world.TeamProperties;
@@ -58,6 +61,8 @@ public class Vault {
 		if((nowMousePressed && !wasMousePressed && pickupCube.contains(Game.mouseLoc())) || (cont.startJustPressed) && numCubes > 0) {
 			draggingCube = true;
 			prop.setCubeStorage(prop.getCubeStorage() - 1);
+			UpdateCubeStoragePacket ucsp = new UpdateCubeStoragePacket(Game.getWorld().getProperties(Team.RED).getCubeStorage() + "", Game.getWorld().getProperties(Team.BLUE).getCubeStorage() + "");
+			Game.sendPacket(ucsp);
 		}else if(nowMousePressed && !wasMousePressed) {
 			float timer = visibilityTimer / 30f;
 			if(timer > 1f) timer = 1f;
@@ -72,18 +77,23 @@ public class Vault {
 				if(r.contains(Game.mouseLoc())) hov = i;
     		}
 			
+			UsePowerupPacket upp = null;
 			switch(hov) {
 				case 0:
-					Game.getWorld().useForce(team);
+					upp = new UsePowerupPacket("force", team.toString());
 					break;
 				case 1:
-					Game.getWorld().useLevitate(team);
+					upp = new UsePowerupPacket("levitate", team.toString());
 					break;
 				case 2:
-					Game.getWorld().useBoost(team);
+					upp = new UsePowerupPacket("boost", team.toString());
 					break;
 				default: 
 					break;
+			}
+			
+			if(upp != null) {
+				Game.doPacket(upp);
 			}
 			
 		}else if((!nowMousePressed && wasMousePressed && draggingCube) || (cont.isConnected && false && !cont.start && draggingCube)) {
@@ -93,22 +103,22 @@ public class Vault {
 				case 0:
 					int forcePrev = prop.getForceLevel();
 					if(forcePrev < 3) {
-						prop.setForceLevel(forcePrev + 1);
-						prop.addScore(5);
+						SetPowerupLevelPacket splp = new SetPowerupLevelPacket("force", team.toString(), (forcePrev+1) + "");
+						Game.doPacket(splp);
 					}
 					break;
 				case 1:
 					int levitatePrev = prop.getLevitateLevel();
 					if(levitatePrev < 3) {
-						prop.setLevitateLevel(levitatePrev + 1);
-						prop.addScore(5);
+						SetPowerupLevelPacket splp = new SetPowerupLevelPacket("levitate", team.toString(), (levitatePrev+1) + "");
+						Game.doPacket(splp);
 					}
 					break;
 				case 2:
 					int boostPrev = prop.getBoostLevel();
 					if(boostPrev < 3) {
-						prop.setBoostLevel(boostPrev + 1);
-						prop.addScore(5);
+						SetPowerupLevelPacket splp = new SetPowerupLevelPacket("boost", team.toString(), (boostPrev+1) + "");
+						Game.doPacket(splp);
 					}
 					break;
 				case 3:
@@ -129,6 +139,8 @@ public class Vault {
 					break;
 				default: 
 					prop.setCubeStorage(prop.getCubeStorage() + 1);
+					UpdateCubeStoragePacket ucsp = new UpdateCubeStoragePacket(Game.getWorld().getProperties(Team.RED).getCubeStorage() + "", Game.getWorld().getProperties(Team.BLUE).getCubeStorage() + "");
+					Game.sendPacket(ucsp);
 					break;
 			}
 			

@@ -313,7 +313,7 @@ public class Game {
 		List<Packet> pack = new ArrayList<Packet>();
 		pack.addAll(packetQueue);
 		for(Packet p : pack) {
-			p.doAction();
+			if(p != null) p.doAction();
 		}
 		packetQueue.clear();
 		
@@ -436,7 +436,7 @@ public class Game {
 	 * @param pack - the {@link Packet} to process
 	 */
 	public static void doPacket(Packet pack){
-		if(!isServer()) ClientStarter.clientStarter.writePacket(pack);
+		sendPacket(pack);
 		pack.doAction();
 	}
 	

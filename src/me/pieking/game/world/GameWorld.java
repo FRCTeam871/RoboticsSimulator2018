@@ -27,6 +27,7 @@ import me.pieking.game.gfx.Sprite;
 import me.pieking.game.net.ServerStarter;
 import me.pieking.game.net.packet.AddCubePacket;
 import me.pieking.game.net.packet.SwitchOrientationPacket;
+import me.pieking.game.net.packet.UpdateCubeStoragePacket;
 import me.pieking.game.net.packet.UpdateScorePacket;
 import me.pieking.game.robot.Robot;
 import me.pieking.game.robot.component.Component;
@@ -739,7 +740,6 @@ public class GameWorld {
     			if(exchanging.contains(c)) continue;
     			for(Team team : getPlayingTeams()){
     				if(getExchangeSensor(team) != null && getExchangeSensor(team).contains(c.base.getWorldCenter())){
-    					getProperties(team).addCubeStorage(1);
     					c.base.destructionTime = System.currentTimeMillis() + 500;
     					c.base.creationTime = Game.getTime();
     					exchanging.add(c);
@@ -747,6 +747,16 @@ public class GameWorld {
     					Scheduler.delayedTask(() -> {
     						removeCube(c);
     					}, 30);
+    					
+    					if(Game.isServer() || !Game.isConnected()) {
+    						getProperties(team).addCubeStorage(1);
+    						
+    						if(Game.isServer()) {
+    							UpdateCubeStoragePacket ucsp = new UpdateCubeStoragePacket(getProperties(Team.RED).getCubeStorage() + "", getProperties(Team.BLUE).getCubeStorage() + "");
+    							ServerStarter.serverStarter.sendToAll(ucsp);
+    						}
+    					}
+    					
     				}
     			}
     		}
@@ -1321,6 +1331,13 @@ public class GameWorld {
 		}
 		
 		return false;
+	}
+
+	public void updateCubeStorage() {
+		if(Game.isServer()) {
+			UpdateCubeStoragePacket ucsp = new UpdateCubeStoragePacket(getProperties(Team.RED).getCubeStorage() + "", getProperties(Team.BLUE).getCubeStorage() + "");
+			ServerStarter.serverStarter.sendToAll(ucsp);
+		}
 	}
 	
 	

@@ -2,6 +2,7 @@ package me.pieking.game.world;
 
 import java.util.HashMap;
 
+import me.pieking.game.Game;
 import me.pieking.game.Vault;
 
 public class TeamProperties {
@@ -45,14 +46,16 @@ public class TeamProperties {
 
 	public void setCubeStorage(int cubeStorage) {
 		this.cubeStorage = cubeStorage;
+		
+		Game.getWorld().updateCubeStorage();
 	}
 	
 	public void addCubeStorage(int cubeStorage) {
-		this.cubeStorage += cubeStorage;
+		setCubeStorage(this.cubeStorage + cubeStorage);
 	}
 	
 	public void removeCubeStorage(int cubeStorage) {
-		this.cubeStorage = Math.max(0, cubeStorage);
+		setCubeStorage(Math.max(0, this.cubeStorage - cubeStorage));
 	}
 	
 	public HashMap<Pentalty, Integer> getPenalties() {

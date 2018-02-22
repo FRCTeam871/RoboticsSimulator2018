@@ -20,7 +20,7 @@ public class UpdateScorePacket extends Packet {
 
 	@Override
 	public void doAction() {
-		System.out.println(redScore + " " + blueScore);
+//		System.out.println(redScore + " " + blueScore);
 		Game.getWorld().getProperties(Team.RED).setScore(redScore);
 		Game.getWorld().getProperties(Team.BLUE).setScore(blueScore);
 	}

@@ -44,6 +44,7 @@ import me.pieking.game.FileSystem;
 import me.pieking.game.Game;
 import me.pieking.game.Location;
 import me.pieking.game.Utils;
+import me.pieking.game.Vars;
 import me.pieking.game.gfx.Fonts;
 import me.pieking.game.gfx.Render;
 import me.pieking.game.gfx.ShipFileAccessory;
@@ -180,6 +181,16 @@ public class Player {
 	}
 	
 	public void tick(){
+		
+		if(Game.isServer()) {
+			if (getLocation().x < 20) {
+				Vector2 vel = base.getLinearVelocity();
+				if(Math.abs(vel.x - activeLinearX) > 10 || Math.abs(vel.y - activeLinearY) > 10) {
+					System.out.println("GLITCH");
+				}
+			}
+		}
+		
 		if(!dead){
     		if(this == Game.getWorld().getSelfPlayer()){
     			tickControls();

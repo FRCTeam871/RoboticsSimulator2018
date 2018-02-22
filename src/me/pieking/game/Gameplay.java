@@ -144,8 +144,10 @@ public class Gameplay {
     		// decrease the remaining game time if its more than 0
     		if(gameTime > 0) gameTime--;
     		
-    		SetGameTimePacket sgtp = new SetGameTimePacket(gameTime + "");
-    		ServerStarter.serverStarter.sendToAll(sgtp);
+    		if(Game.isServer()) {
+        		SetGameTimePacket sgtp = new SetGameTimePacket(gameTime + "");
+        		ServerStarter.serverStarter.sendToAll(sgtp);
+    		}
 		}
 	}
 	
