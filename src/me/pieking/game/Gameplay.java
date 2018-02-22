@@ -17,7 +17,9 @@ import me.pieking.game.menu.SelectScriptMenu;
 import me.pieking.game.net.ServerStarter;
 import me.pieking.game.net.packet.ChoseAutonPacket;
 import me.pieking.game.net.packet.PlayerUpdatePacket;
+import me.pieking.game.net.packet.SetGameTimePacket;
 import me.pieking.game.net.packet.SetStatePacket;
+import me.pieking.game.net.packet.SetTeamPacket;
 import me.pieking.game.net.packet.VotePacket;
 import me.pieking.game.robot.Robot;
 import me.pieking.game.robot.component.ClawGrabberComponent;
@@ -99,7 +101,7 @@ public class Gameplay {
 				}
 				
 				if(readyToStart.size() < Game.getWorld().getPlayers().size()) {
-					gameTime = 2 * 60;
+					setGameTime(2 * 60);
 				}
 				
 				break;
@@ -138,8 +140,13 @@ public class Gameplay {
 				break;
 		}
 		
-		// decrease the remaining game time if its more than 0
-		if(gameTime > 0) gameTime--;
+		if(Game.isServer() || !Game.isConnected()) {
+    		// decrease the remaining game time if its more than 0
+    		if(gameTime > 0) gameTime--;
+    		
+    		SetGameTimePacket sgtp = new SetGameTimePacket(gameTime + "");
+    		ServerStarter.serverStarter.sendToAll(sgtp);
+		}
 	}
 	
 	/**
@@ -397,7 +404,7 @@ public class Gameplay {
 		
 		switch (state) {
 			case WAITING_FOR_PLAYERS:
-				gameTime = 2 * 60;
+				setGameTime(2 * 60);
 				Robot.setAllEnabled(false);
 				resetField();
 				voted.clear();
@@ -405,7 +412,7 @@ public class Gameplay {
 				break;
 			case SETUP:
 				resetField();
-				gameTime = 2 * 60;
+				setGameTime(2 * 60);
 				Robot.setAllEnabled(false);
 				Game.getWorld().setCameraCentered(false);
 				
@@ -450,17 +457,17 @@ public class Gameplay {
 				Game.getWorld().getProperties(Team.RED).setSwitchScoreMod(2);
 				Game.getWorld().getProperties(Team.BLUE).setScaleScoreMod(2);
 				Game.getWorld().getProperties(Team.BLUE).setSwitchScoreMod(2);
-				gameTime = 15 * 60; // 15s
+				setGameTime(15 * 60); // 15s
 				Robot.setAllEnabled(false);
 				
-				for(Player p : Game.getWorld().getPlayers()) {
-					Robot r = p.getRobot();
-					for(Component comp : r.getComponents()) {
-						if(comp instanceof ClawGrabberComponent) {
-							((ClawGrabberComponent) comp).setHasCube(true);
-						}
-					}
-				}
+//				for(Player p : Game.getWorld().getPlayers()) {
+//					Robot r = p.getRobot();
+//					for(Component comp : r.getComponents()) {
+//						if(comp instanceof ClawGrabberComponent) {
+//							((ClawGrabberComponent) comp).setHasCube(true);
+//						}
+//					}
+//				}
 				
 				if(!Game.isServer()) {
     				LuaScript ls = Game.getWorld().getSelfPlayer().getRobot().getAutonScript();
@@ -477,7 +484,7 @@ public class Gameplay {
 				Game.getWorld().getProperties(Team.RED).setSwitchScoreMod(1);
 				Game.getWorld().getProperties(Team.BLUE).setScaleScoreMod(1);
 				Game.getWorld().getProperties(Team.BLUE).setSwitchScoreMod(1);
-				gameTime = 135 * 60; // 2m 15s
+				setGameTime(135 * 60); // 2m 15s
 				Robot.setAllEnabled(true);
 				
 				if(!Game.isServer()) {
@@ -489,7 +496,7 @@ public class Gameplay {
 				s_startTeleop.start();
 				break;
 			case MATCH_END:
-				gameTime = 10 * 60; // 10s
+				setGameTime(10 * 60); // 10s
 				Robot.setAllEnabled(false);
 				
 				for(Player p : Game.getWorld().getPlayers()) {

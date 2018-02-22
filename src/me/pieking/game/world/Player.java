@@ -1099,7 +1099,7 @@ public class Player {
 			}
 		}
 //		System.out.println(climbing);
-		robot.setCanMove(!climbing);
+		if(robot != null) robot.setCanMove(!climbing);
 		this.climbing = climbing;
 	}
 

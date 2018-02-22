@@ -32,6 +32,12 @@ public class CubeUpdatePacket extends Packet {
 	@Override
 	public void doAction() {
 		PowerCube c = Game.getWorld().getPowerCube(id);
+		
+		if(c == null) {
+			PowerCube pc = new PowerCube(x, y, 0, id);
+			Game.getWorld().addPowerCube(pc);
+			c = pc;
+		}
 //		System.out.println(p);
 		if(c != null){
 			
@@ -43,15 +49,6 @@ public class CubeUpdatePacket extends Packet {
 			c.setRotation(rot);
 			c.base.translateToOrigin();
 			c.base.translate(x, y);
-			
-//			tr.rotate(rot, p.base.getWorldCenter());
-//			p.base.translateToOrigin();
-//			p.base.rotateAboutCenter(rot);
-////			p.base.translate(x, y);
-////			p.base.setTransform(new Transform());
-////			p.base.getTransform().setRotation(rot);
-//			p.base.translate(x, y);
-//			System.out.println(p.base.getWorldCenter());
 			c.base.setLinearVelocity(xa, ya);
 			c.base.setAngularVelocity(rotA);
 			

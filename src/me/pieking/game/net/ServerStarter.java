@@ -14,10 +14,12 @@ import me.pieking.game.Scheduler;
 import me.pieking.game.net.packet.JoinPacket;
 import me.pieking.game.net.packet.LeavePacket;
 import me.pieking.game.net.packet.Packet;
+import me.pieking.game.net.packet.SetTeamPacket;
 import me.pieking.game.net.packet.ShipComponentHealthPacket;
 import me.pieking.game.net.packet.ShipDataPacket;
 import me.pieking.game.robot.component.Component;
 import me.pieking.game.world.Player;
+import me.pieking.game.world.Balance.Team;
 
 public class ServerStarter {
 
@@ -87,6 +89,9 @@ public class ServerStarter {
 			if(pl != null) {
 				connections.put(from, pl);
 				awaitingInitialData.remove(from);
+				pl.team = connections.size() % 2 == 0 ? Team.RED : Team.BLUE;
+				SetTeamPacket stp = new SetTeamPacket(pl.name, pl.team.toString());
+				sendToAll(stp);
 			}
 			
 //			if(Game.startGameTimer == -1 && Game.getWorld().getPlayers().size() > 1){
@@ -109,6 +114,9 @@ public class ServerStarter {
     					    
     						ShipDataPacket sdp = new ShipDataPacket(pl2.name, decoded);
     						writePacket(from, sdp);
+    						
+    						SetTeamPacket stp = new SetTeamPacket(pl2.name, pl2.team.toString());
+    						writePacket(from, stp);
     						
     						Scheduler.delayedTask(() -> {
     							for(Component c : pl2.robot.getComponents()){
