@@ -13,6 +13,7 @@ import com.studiohartman.jamepad.ControllerState;
 import me.pieking.game.gfx.Fonts;
 import me.pieking.game.gfx.Images;
 import me.pieking.game.gfx.Sprite;
+import me.pieking.game.net.packet.PortalEjectPacket;
 import me.pieking.game.net.packet.SetPowerupLevelPacket;
 import me.pieking.game.net.packet.UpdateCubeStoragePacket;
 import me.pieking.game.net.packet.UsePowerupPacket;
@@ -24,8 +25,10 @@ public class Vault {
 
 	public static Sprite vault_red = Images.getSprite("vault_red.png");
 	public static Sprite vault_blue = Images.getSprite("vault_blue.png");
-	public static Sprite exchange = Images.getSprite("exchange.png");
-	public static Sprite portal = Images.getSprite("portal.png");
+	public static Sprite exchange_red = Images.getSprite("exchange_red.png");
+	public static Sprite exchange_blue = Images.getSprite("exchange_blue.png");
+	public static Sprite portal_red = Images.getSprite("portal_red.png");
+	public static Sprite portal_blue = Images.getSprite("portal_blue.png");
 	
 	private boolean draggingCube = false;
 	private boolean wasMousePressed = false;
@@ -122,20 +125,25 @@ public class Vault {
 					}
 					break;
 				case 3:
-					PowerCube portalCube1 = new PowerCube(49.1, 21.4, 0);
-					portalCube1.base.rotateAboutCenter(Math.toRadians(-45));
-					Game.getWorld().addPowerCube(portalCube1);
+					{
+						PortalEjectPacket pep = new PortalEjectPacket(team.toString(), 0 + "");
+						Game.sendPacket(pep);
+						if(!Game.isConnected()) Game.doPacket(pep);
+					}
 					break;
 				case 4:
-					PowerCube exchangeCube = new PowerCube(8, 10, 0);
-					exchangeCube.base.rotateAboutCenter(Math.toRadians(90));
-					exchangeCube.base.applyForce(new Vector2(500, 0));
-					Game.getWorld().addPowerCube(exchangeCube);
+    				{
+    					PortalEjectPacket pep = new PortalEjectPacket(team.toString(), 1 + "");
+    					Game.sendPacket(pep);
+    					if(!Game.isConnected()) Game.doPacket(pep);
+    				}
 					break;
 				case 5:
-					PowerCube portalCube2 = new PowerCube(49.1, 2.2, 0);
-					portalCube2.base.rotateAboutCenter(Math.toRadians(45 + 180));
-					Game.getWorld().addPowerCube(portalCube2);
+    				{
+    					PortalEjectPacket pep = new PortalEjectPacket(team.toString(), 2 + "");
+    					Game.sendPacket(pep);
+    					if(!Game.isConnected()) Game.doPacket(pep);
+    				}
 					break;
 				default: 
 					prop.setCubeStorage(prop.getCubeStorage() + 1);
@@ -154,9 +162,9 @@ public class Vault {
 				}
     		}
 			
-			Rectangle portal1Rect = new Rectangle(Game.getWidth() - portal.getWidth() - 10, 10, portal.getWidth(), portal.getHeight());
-			Rectangle exchangeRect = new Rectangle(Game.getWidth() - portal.getWidth() - exchange.getWidth() - 10 - 10, 10, exchange.getWidth(), exchange.getHeight());
-			Rectangle portal2Rect = new Rectangle(Game.getWidth() - portal.getWidth()*2 - exchange.getWidth() - 10 - 10 - 10, 10, portal.getWidth(), portal.getHeight());
+			Rectangle portal1Rect = new Rectangle(Game.getWidth() - portal_red.getWidth() - 10, 10, portal_red.getWidth(), portal_red.getHeight());
+			Rectangle exchangeRect = new Rectangle(Game.getWidth() - portal_red.getWidth() - exchange_red.getWidth() - 10 - 10, 10, exchange_red.getWidth(), exchange_red.getHeight());
+			Rectangle portal2Rect = new Rectangle(Game.getWidth() - portal_red.getWidth()*2 - exchange_red.getWidth() - 10 - 10 - 10, 10, portal_red.getWidth(), portal_red.getHeight());
 			
 			if(portal1Rect.contains(Game.mouseLoc())) newHover = 3;
 			if(exchangeRect.contains(Game.mouseLoc())) newHover = 4;
@@ -325,6 +333,9 @@ public class Vault {
 		g.drawImage(vaultSpr.getImage(), 10, Game.getHeight() - h - 10, w, h, null);
 		
 		g.setClip(clip);
+		
+		Sprite portal = team == Team.RED ? portal_red : portal_blue;
+		Sprite exchange  = team == Team.RED ? exchange_red : exchange_blue;
 		
 		int portal1W = portal.getWidth();
 		int portal1H = portal.getHeight();

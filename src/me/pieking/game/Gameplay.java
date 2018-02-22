@@ -484,6 +484,7 @@ public class Gameplay {
 				Game.getWorld().getProperties(Team.RED).setCubeStorage(14);
 				Game.getWorld().getProperties(Team.RED).setScaleScoreMod(1);
 				Game.getWorld().getProperties(Team.RED).setSwitchScoreMod(1);
+				Game.getWorld().getProperties(Team.BLUE).setCubeStorage(14);
 				Game.getWorld().getProperties(Team.BLUE).setScaleScoreMod(1);
 				Game.getWorld().getProperties(Team.BLUE).setSwitchScoreMod(1);
 				setGameTime(135 * 60); // 2m 15s
