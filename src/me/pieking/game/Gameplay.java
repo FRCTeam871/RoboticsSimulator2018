@@ -20,6 +20,7 @@ import me.pieking.game.net.packet.PlayerUpdatePacket;
 import me.pieking.game.net.packet.SetGameTimePacket;
 import me.pieking.game.net.packet.SetStatePacket;
 import me.pieking.game.net.packet.SetTeamPacket;
+import me.pieking.game.net.packet.UpdateScorePacket;
 import me.pieking.game.net.packet.VotePacket;
 import me.pieking.game.robot.Robot;
 import me.pieking.game.robot.component.ClawGrabberComponent;
@@ -499,6 +500,12 @@ public class Gameplay {
 				s_startTeleop.start();
 				break;
 			case MATCH_END:
+				
+				if(Game.isServer()) {
+					UpdateScorePacket usp = new UpdateScorePacket(Game.getWorld().getProperties(Team.RED).getScore() + "", Game.getWorld().getProperties(Team.BLUE).getScore() + "");
+					ServerStarter.serverStarter.sendToAll(usp);
+				}
+				
 				setGameTime(10 * 60); // 10s
 				Robot.setAllEnabled(false);
 				
