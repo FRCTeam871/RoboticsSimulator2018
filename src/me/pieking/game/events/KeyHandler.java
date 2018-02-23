@@ -121,6 +121,9 @@ public class KeyHandler implements KeyListener{
 			}else if(e.getKeyCode() == KeyEvent.VK_S && Game.gameplay.getState() == GameState.WAITING_FOR_PLAYERS) {
 				Render.showMenu(new ServerSettingsMenu());
 			}
+		}else {
+			if(e.getKeyCode() == KeyEvent.VK_R) {
+				Game.getWorld().getSelfPlayer().reconstruct();
 			}
 		}
 		

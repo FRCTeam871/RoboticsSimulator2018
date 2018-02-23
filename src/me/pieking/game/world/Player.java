@@ -44,8 +44,8 @@ import com.studiohartman.jamepad.ControllerState;
 import me.pieking.game.FileSystem;
 import me.pieking.game.Game;
 import me.pieking.game.Location;
-import me.pieking.game.Utils;
 import me.pieking.game.Settings;
+import me.pieking.game.Utils;
 import me.pieking.game.gfx.Fonts;
 import me.pieking.game.gfx.Render;
 import me.pieking.game.gfx.ShipFileAccessory;
@@ -114,6 +114,8 @@ public class Player {
 	private boolean climbing = false;
 	
 	private JSONObject teamInfo;
+	
+	private boolean doReset = false;
 	
 	public Player(String name, double x, double y, Team team) {
 		this.team = team;
@@ -198,17 +200,14 @@ public class Player {
 	
 	public void tick(){
 		
-		if(Game.isServer()) {
-//			if (getLocation().x < 20) {
-				Vector2 vel = base.getLinearVelocity();
-//				System.out.println(vel.x);
-				if(Math.abs(vel.x - activeLinearX) > 50 || Math.abs(vel.y - activeLinearY) > 50) {
-					System.out.println("GLITCH");
-					double rot = base.getTransform().getRotation();
-					constructShip();
-					base.getTransform().setRotation(rot);
-				}
-//			}
+		Vector2 vel = base.getLinearVelocity();
+		if(Math.abs(vel.x - activeLinearX) > 50 || Math.abs(vel.y - activeLinearY) > 50) {
+			System.out.println("GLITCH");
+			doReset = true;
+		}else if(doReset) {
+			doReset = false;
+			reconstruct();
+			System.out.println("RESET");
 		}
 		
 		if(!dead){
@@ -930,7 +929,7 @@ public class Player {
 		base.setAngularDamping(GameWorld.getAngularDamping() * 0.75);
 		base.setLinearDamping(GameWorld.getLinearDamping());
 		Game.getWorld().getWorld().addBody(base);
-		setRotation(0);
+//		setRotation(0);
 //		translateToOrigin();
 		
 //		System.out.println(bods);
@@ -1186,6 +1185,15 @@ public class Player {
 
 	public void setTeamInfo(JSONObject teamInfo) {
 		this.teamInfo = teamInfo;
+	}
+	
+	public void reconstruct() {
+		double rot = getRotation();
+		constructShip();
+		constructShip();
+		setRotation(rot);
+		base.setLinearVelocity(new Vector2(activeLinearX, activeLinearY));
+		base.setAngularVelocity(activeAngularRot);
 	}
 	
 }
