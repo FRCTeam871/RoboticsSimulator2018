@@ -200,7 +200,7 @@ public class ClawGrabberComponent extends ActivatableComponent {
 	}
 	
 	public void setHasCube(boolean cube){
-		System.out.println("setHasCube(" + cube + ");");
+//		System.out.println("setHasCube(" + cube + ");");
 		this.hasCube = cube;
 		if(!cube) {
 			if(weld != null) {
@@ -330,7 +330,7 @@ public class ClawGrabberComponent extends ActivatableComponent {
 	}
 
 	public void grabCube(PowerCube c, double rot) {
-		System.out.println("grab: " + c.getId());
+//		System.out.println("grab: " + c.getId());
 		cube = c;
 		cube.base.setMass(new Mass(cube.base.getLocalCenter(), 0.1, 0.1));
 		cube.base.shouldRender = false;
