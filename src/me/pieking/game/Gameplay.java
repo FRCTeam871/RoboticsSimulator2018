@@ -202,13 +202,13 @@ public class Gameplay {
 			g.setColor(Color.RED);
 			g.setFont(Fonts.pixelmix.deriveFont(40f));
 			String msg = "Waiting for Players...";
-			if(!Game.isConnected()) {
+			if(!Game.isConnected() && !Game.isServer()) {
 				msg = "Not Connected to Server";
 				g.setFont(Fonts.pixelmix.deriveFont(36f));
 			}
 			g.drawString(msg, Game.getWidth()/2 - g.getFontMetrics().stringWidth(msg)/2, Game.getHeight()/2);
 			g.setFont(Fonts.pixelmix.deriveFont(32f));
-			if(Game.isConnected()) {
+			if(Game.isConnected() || Game.isServer()) {
     			String msg2 = "(" + Game.getWorld().getPlayers().size() + "/6)";
     			g.drawString(msg2, Game.getWidth()/2 - g.getFontMetrics().stringWidth(msg2)/2, Game.getHeight()/2 + 40);
 			}
@@ -230,9 +230,9 @@ public class Gameplay {
 			if(Game.isServer() || !Game.isConnected()) {
 				msg3 = "Press " + (Game.controllerState().isConnected ? "(A)" : "[V]") + " to force start.";
 			}
-			g.drawString(msg3, Game.getWidth()/2 - g.getFontMetrics().stringWidth(msg3)/2, Game.getHeight()/2 + 80 - (Game.isConnected() ? 0 : 40));
+			g.drawString(msg3, Game.getWidth()/2 - g.getFontMetrics().stringWidth(msg3)/2, Game.getHeight()/2 + 80 - (Game.isConnected() || Game.isServer() ? 0 : 40));
 			
-			if(Game.isConnected()) {
+			if(Game.isConnected() || Game.isServer()) {
     			String msg4 = "" + numVoted + " of " + (int)Math.ceil(Game.getWorld().getPlayers().size() / 2d) + " needed.";
     			g.drawString(msg4, Game.getWidth()/2 - g.getFontMetrics().stringWidth(msg4)/2, Game.getHeight()/2 + 100);
 			}

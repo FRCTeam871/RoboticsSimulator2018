@@ -37,6 +37,7 @@ import org.dyn4j.dynamics.joint.WeldJoint;
 import org.dyn4j.geometry.Mass;
 import org.dyn4j.geometry.MassType;
 import org.dyn4j.geometry.Vector2;
+import org.json.JSONObject;
 
 import com.studiohartman.jamepad.ControllerState;
 
@@ -112,6 +113,8 @@ public class Player {
 	
 	private boolean climbing = false;
 	
+	private JSONObject teamInfo;
+	
 	public Player(String name, double x, double y, Team team) {
 		this.team = team;
 		this.name = name;
@@ -139,6 +142,19 @@ public class Player {
 		inventory.put(ClawGrabberComponent.class, 5);
 		inventory.put(ComponentBumberSide.class, 20);
 		inventory.put(ComponentBumberCorner.class, 20);
+		
+		if(name.matches("Team \\d+")) {
+			int teamNum = Integer.parseInt(name.substring(5));
+    		try {
+    			System.out.println("Polling TBA for team " + teamNum + " ...");
+    			JSONObject json = Utils.getTeamInfo(teamNum);
+    			System.out.println("Got response:");
+    			System.out.println(json.toString(2));
+    			if(!json.has("Errors")) setTeamInfo(json);
+    		}catch(Exception e) {
+    			e.printStackTrace();
+    		}
+		}
 		
 //		List<Component> comp = new ArrayList<Component>();
 //		comp.add(new StructureComponentSlope(1, 0, -90));
@@ -810,9 +826,24 @@ public class Player {
 		trans.translate(-0.5 * gridBoxSize * gridSize, -0.5 * gridBoxSize * gridSize);
 		g.setTransform(trans);
 		
-		g.setColor(Color.WHITE);
-		g.setFont(Fonts.pixelmix.deriveFont(12f));
-		g.drawString(name, 0 - g.getFontMetrics().stringWidth(name)/2, 0);
+		
+		if(teamInfo != null && teamInfo.has("nickname") && !teamInfo.getString("nickname").equals(name)) {
+			g.setColor(Color.WHITE);
+			g.setFont(Fonts.pixelmix.deriveFont(12f));
+			g.drawString(name, 0 - g.getFontMetrics().stringWidth(name)/2, -10);
+			
+			String nick = teamInfo.getString("nickname");
+			List<String> str = Utils.wrapString(nick, 150, g.getFontMetrics());
+//			System.out.println(str);
+			
+			for(int i = 0; i < str.size(); i++) {
+				g.drawString(str.get(i).trim(), 0 - g.getFontMetrics().stringWidth(str.get(i).trim())/2, 14 + 14*i);
+			}
+		}else {
+			g.setColor(Color.WHITE);
+			g.setFont(Fonts.pixelmix.deriveFont(12f));
+			g.drawString(name, 0 - g.getFontMetrics().stringWidth(name)/2, 0);
+		}
 		
 		g.setTransform(tr);
 		
@@ -876,7 +907,7 @@ public class Player {
 		GameObject allColl = new GameObject();
 		
 		for(BodyFixture f : fix) {
-			System.out.println(f.createMass().getMass());
+//			System.out.println(f.createMass().getMass());
 			allColl.addFixture(f);
 		}
 		
@@ -1147,6 +1178,14 @@ public class Player {
 
 	public void setHeight(float height) {
 		this.height = height;
+	}
+
+	public JSONObject getTeamInfo() {
+		return teamInfo;
+	}
+
+	public void setTeamInfo(JSONObject teamInfo) {
+		this.teamInfo = teamInfo;
 	}
 	
 }

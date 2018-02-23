@@ -293,8 +293,8 @@ public class Vault {
 		Team force_q = Game.getWorld().getForce().getQueued();
 		Team boost_q = Game.getWorld().getBoost().getQueued();
 
-		Color blueLedCol = new Color(0.2f, 0.2f, 1f, 1f);
-		Color blueLedColPulse = new Color(0.2f, 0.2f, 1f, (float) ((Math.sin(Game.getTime() / 10f) + 1f) / 2f));
+		Color blueLedCol = new Color(0.3f, 0.6f, 1f, 1f);
+		Color blueLedColPulse = new Color(0.3f, 0.6f, 1f, (float) ((Math.sin(Game.getTime() / 10f) + 1f) / 2f));
 		Color redLedCol = new Color(1f, 0.4f, 0.4f, 1f);
 		Color redLedColPulse = new Color(1f, 0.4f, 0.4f, (float) ((Math.sin(Game.getTime() / 10f) + 1f) / 2f));
 		

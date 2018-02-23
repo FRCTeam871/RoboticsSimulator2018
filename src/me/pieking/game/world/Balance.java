@@ -80,7 +80,7 @@ public class Balance {
 		
 		if(Game.getWorld().getBoost().getUsing() != Team.NONE) {
     		int boostLevel = Game.getWorld().getBoost().getLevel();
-    		System.out.println(boostLevel);
+//    		System.out.println(boostLevel);
     		boolean boostL = false;
     		if(this instanceof Scale) {
     			if(boostLevel >= 2) boostL = true;
@@ -99,7 +99,7 @@ public class Balance {
 		
 		if(Game.getWorld().getForce().getUsing() != Team.NONE) {
     		int forceLevel = Game.getWorld().getForce().getLevel();
-    		System.out.println(forceLevel);
+//    		System.out.println(forceLevel);
     		boolean forceL = false;
     		if(this instanceof Scale) {
     			if(forceLevel >= 2) forceL = true;
