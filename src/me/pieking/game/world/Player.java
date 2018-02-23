@@ -183,12 +183,16 @@ public class Player {
 	public void tick(){
 		
 		if(Game.isServer()) {
-			if (getLocation().x < 20) {
+//			if (getLocation().x < 20) {
 				Vector2 vel = base.getLinearVelocity();
+				System.out.println(vel.x);
 				if(Math.abs(vel.x - activeLinearX) > 10 || Math.abs(vel.y - activeLinearY) > 10) {
 					System.out.println("GLITCH");
+					double rot = base.getTransform().getRotation();
+					constructShip();
+					base.getTransform().setRotation(rot);
 				}
-			}
+//			}
 		}
 		
 		if(!dead){

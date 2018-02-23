@@ -123,7 +123,7 @@ public class Gameplay {
 			case TELEOP:
 				if(Game.keyHandler().isPressed(KeyEvent.VK_F9)) setState(GameState.MATCH_END);
 				if(gameTime <= 0){
-					setState(GameState.MATCH_END);
+//					setState(GameState.MATCH_END);
 				}
 				
 				if(gameTime == 30 * 60) {
