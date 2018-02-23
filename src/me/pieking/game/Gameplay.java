@@ -233,8 +233,13 @@ public class Gameplay {
 			g.drawString(msg3, Game.getWidth()/2 - g.getFontMetrics().stringWidth(msg3)/2, Game.getHeight()/2 + 80 - (Game.isConnected() || Game.isServer() ? 0 : 40));
 			
 			if(Game.isConnected() || Game.isServer()) {
-    			String msg4 = "" + numVoted + " of " + (int)Math.ceil(Game.getWorld().getPlayers().size() / 2d) + " needed.";
-    			g.drawString(msg4, Game.getWidth()/2 - g.getFontMetrics().stringWidth(msg4)/2, Game.getHeight()/2 + 100);
+				String msg4 = "" + numVoted + " of " + (int)Math.ceil(Game.getWorld().getPlayers().size() / 2d) + " needed.";
+				g.drawString(msg4, Game.getWidth()/2 - g.getFontMetrics().stringWidth(msg4)/2, Game.getHeight()/2 + 100);
+			}
+			
+			if(!Game.isConnected() || Game.isServer()) {
+    			String msg4 = "Press [S] for settings.";
+    			g.drawString(msg4, Game.getWidth()/2 - g.getFontMetrics().stringWidth(msg4)/2, Game.getHeight()/2 + 130);
 			}
 		}else if(state == GameState.SETUP){
 			g.setColor(new Color(0f, 0f, 0f, 0.5f));

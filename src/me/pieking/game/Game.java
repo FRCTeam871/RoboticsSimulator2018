@@ -347,7 +347,7 @@ public class Game {
 			e.printStackTrace();
 		}
 		
-		if(!isServer()){
+//		if(!isServer()){
 			Point p = disp.getMousePositionScaled();
     		if(p != null) keyHandler.lastMousePos = p;
     		
@@ -357,7 +357,7 @@ public class Game {
     			m.iTick();
     		}
     		
-		}
+//		}
 		
 		time++;
 	}
