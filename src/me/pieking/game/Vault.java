@@ -39,6 +39,9 @@ public class Vault {
 	
 	private Team team;
 	
+	private boolean lockOpen = false;
+	private float scale = 2f;
+	
 	public Vault(Team team) {
 		this.team = team;
 	}
@@ -220,9 +223,12 @@ public class Vault {
 		g.setColor(Color.CYAN);
 		Sprite cube = PowerCube.spr;
 		
-		int scale = 2;
+		int scale = (int)this.scale;
 		
 		float timer = visibilityTimer / 30f;
+		
+		if(lockOpen) timer = 1f;
+		
 		if(timer > 1f) timer = 1f;
 		if(timer < 0f) timer = 0f;
 		
@@ -250,11 +256,11 @@ public class Vault {
 		for(int i = 0; i < prop.getForceLevel() + forcePlace; i++) {
 			if(i >= 3) continue;
 			if(forcePlace > 0 && i == prop.getForceLevel() + forcePlace - 1) {
-				g.drawImage(cube.getImageAlpha(0.25f), 10, Game.getHeight() - h - 10 + 192 - 36*scale*i, 40 * scale, 40 * scale, null);
+				g.drawImage(cube.getImageAlpha(0.25f), 10, Game.getHeight() - h - 10 + (96 * scale) - 36*scale*i, 40 * scale, 40 * scale, null);
 			}else {
-				g.drawImage(cube.getImage(), 10, Game.getHeight() - h - 10 + 192 - 36*scale*i, 40 * scale, 40 * scale, null);
+				g.drawImage(cube.getImage(), 10, Game.getHeight() - h - 10 + (96 * scale) - 36*scale*i, 40 * scale, 40 * scale, null);
 				g.setColor(Color.YELLOW);
-				g.fillRect(10 + 14 + (12 * (i+1)), Game.getHeight() - h - 10 + 14, 2*scale, 2*scale);
+				g.fillRect(10 + (7 * scale) + ((6 * scale) * (i+1)), Game.getHeight() - h - 10 + (7 * scale), 2*scale, 2*scale);
 			}
 		}
 		
@@ -262,11 +268,11 @@ public class Vault {
 		for(int i = 0; i < prop.getLevitateLevel() + levitatePlace; i++) {
 			if(i >= 3) continue;
 			if(levitatePlace > 0 && i == prop.getLevitateLevel() + levitatePlace - 1) {
-				g.drawImage(cube.getImageAlpha(0.25f), 10 + 38*scale, Game.getHeight() - h - 10 + 192 - 36*scale*i, 40 * scale, 40 * scale, null);
+				g.drawImage(cube.getImageAlpha(0.25f), 10 + 38*scale, Game.getHeight() - h - 10 + (96 * scale) - 36*scale*i, 40 * scale, 40 * scale, null);
 			}else {
-				g.drawImage(cube.getImage(), 10 + 38*scale, Game.getHeight() - h - 10 + 192 - 36*scale*i, 40 * scale, 40 * scale, null);
+				g.drawImage(cube.getImage(), 10 + 38*scale, Game.getHeight() - h - 10 + (96 * scale) - 36*scale*i, 40 * scale, 40 * scale, null);
 				g.setColor(Color.YELLOW);
-				g.fillRect(10 + 14 + 38*scale + 2 + (12 * (i+1)), Game.getHeight() - h - 10 + 14, 2*scale, 2*scale);
+				g.fillRect(10 + (7 * scale) + 38*scale + scale + ((6 * scale) * (i+1)), Game.getHeight() - h - 10 + (7 * scale), 2*scale, 2*scale);
 			}
 		}
 		
@@ -274,11 +280,11 @@ public class Vault {
 		for(int i = 0; i < prop.getBoostLevel() + boostPlace; i++) {
 			if(i >= 3) continue;
 			if(boostPlace > 0 && i == prop.getBoostLevel() + boostPlace - 1) {
-				g.drawImage(cube.getImageAlpha(0.25f), 10 + 38*scale*2, Game.getHeight() - h - 10 + 192 - 36*scale*i, 40 * scale, 40 * scale, null);
+				g.drawImage(cube.getImageAlpha(0.25f), 10 + 38*scale*2, Game.getHeight() - h - 10 + (96 * scale) - 36*scale*i, 40 * scale, 40 * scale, null);
 			}else {
-				g.drawImage(cube.getImage(), 10 + 38*scale*2, Game.getHeight() - h - 10 + 192 - 36*scale*i, 40 * scale, 40 * scale, null);
+				g.drawImage(cube.getImage(), 10 + 38*scale*2, Game.getHeight() - h - 10 + (96 * scale) - 36*scale*i, 40 * scale, 40 * scale, null);
 				g.setColor(Color.YELLOW);
-				g.fillRect(10 + 14 + 38*scale*2 + (12 * (i+1)), Game.getHeight() - h - 10 + 14, 2*scale, 2*scale);
+				g.fillRect(10 + (7 * scale) + 38*scale*2 + ((6 * scale) * (i+1)), Game.getHeight() - h - 10 + (7 * scale), 2*scale, 2*scale);
 			}
 		}
 		
@@ -309,19 +315,19 @@ public class Vault {
 		if(prop.getUsedLevitate()) {
 			for(int i = 0; i < 5; i++) {
 				g.setColor(team == Team.BLUE ? blueLedCol : redLedCol);
-				g.fillRect(10 + 14 + 38*scale*1 + 2 + (12 * i), Game.getHeight() - h - 10 + 14, 2*scale, 2*scale);
+				g.fillRect(10 + (7*scale) + 38*scale*1 + scale + ((6*scale) * i), Game.getHeight() - h - 10 + (7*scale), 2*scale, 2*scale);
 			}
 		}
 		
 		if(boost == team) {
 			for(int i = 0; i < 5; i++) {
 				g.setColor(team == Team.BLUE ? blueLedCol : redLedCol);
-				g.fillRect(10 + 14 + 38*scale*2 + (12 * i), Game.getHeight() - h - 10 + 14, 2*scale, 2*scale);
+				g.fillRect(10 + (7*scale) + 38*scale*2 + ((6*scale) * i), Game.getHeight() - h - 10 + (7*scale), 2*scale, 2*scale);
 			}
 		}else if(boost_q == team) {
 			for(int i = 0; i < 5; i++) {
 				g.setColor(Color.DARK_GRAY);
-				g.fillRect(10 + 14 + 38*scale*2 + (12 * i), Game.getHeight() - h - 10 + 14, 2*scale, 2*scale);
+				g.fillRect(10 + (7*scale) + 38*scale*2 + ((6*scale) * i), Game.getHeight() - h - 10 + (7*scale), 2*scale, 2*scale);
 				g.setColor(team == Team.BLUE ? blueLedColPulse : redLedColPulse);
 				g.fillRect(10 + 14 + 38*scale*2 + (12 * i), Game.getHeight() - h - 10 + 14, 2*scale, 2*scale);
 			}
@@ -334,48 +340,76 @@ public class Vault {
 		
 		g.setClip(clip);
 		
-		Sprite portal = team == Team.RED ? portal_red : portal_blue;
-		Sprite exchange  = team == Team.RED ? exchange_red : exchange_blue;
-		
-		int portal1W = portal.getWidth();
-		int portal1H = portal.getHeight();
-		if(hoverVault == 3) {
-			portal1W *= 1.2;
-			portal1H *= 1.2;
+		if(!lockOpen) {
+    		Sprite portal = team == Team.RED ? portal_red : portal_blue;
+    		Sprite exchange  = team == Team.RED ? exchange_red : exchange_blue;
+    		
+    		int portal1W = portal.getWidth();
+    		int portal1H = portal.getHeight();
+    		if(hoverVault == 3) {
+    			portal1W *= 1.2;
+    			portal1H *= 1.2;
+    		}
+    		g.drawImage(portal.getImage(), Game.getWidth() - portal1W/2 - 40, 40 - portal1H/2, portal1W, portal1H, null);
+    		
+    		int exchangeW = exchange.getWidth();
+    		int exchangeH = exchange.getHeight();
+    		if(hoverVault == 4) {
+    			exchangeW *= 1.2;
+    			exchangeH *= 1.2;
+    		}
+    		g.drawImage(exchange.getImage(), Game.getWidth() - portal.getWidth() - exchangeW/2 - 45 - 10, 40 - exchangeH/2, exchangeW, exchangeH, null);
+    		
+    		int portal2W = portal.getWidth();
+    		int portal2H = portal.getHeight();
+    		if(hoverVault == 5) {
+    			portal2W *= 1.2;
+    			portal2H *= 1.2;
+    		}
+    		g.drawImage(portal.getImage(), Game.getWidth() - portal.getWidth() - portal2W/2 - 40 - exchange.getWidth() - 10 - 10 - 10, 40 - portal2H/2, portal2W, portal2H, null);
 		}
-		g.drawImage(portal.getImage(), Game.getWidth() - portal1W/2 - 40, 40 - portal1H/2, portal1W, portal1H, null);
-		
-		int exchangeW = exchange.getWidth();
-		int exchangeH = exchange.getHeight();
-		if(hoverVault == 4) {
-			exchangeW *= 1.2;
-			exchangeH *= 1.2;
-		}
-		g.drawImage(exchange.getImage(), Game.getWidth() - portal.getWidth() - exchangeW/2 - 45 - 10, 40 - exchangeH/2, exchangeW, exchangeH, null);
-		
-		int portal2W = portal.getWidth();
-		int portal2H = portal.getHeight();
-		if(hoverVault == 5) {
-			portal2W *= 1.2;
-			portal2H *= 1.2;
-		}
-		g.drawImage(portal.getImage(), Game.getWidth() - portal.getWidth() - portal2W/2 - 40 - exchange.getWidth() - 10 - 10 - 10, 40 - portal2H/2, portal2W, portal2H, null);
 		
 		// power cube storage
 		
-		g.drawImage(PowerCube.spr.getImage(), Game.getWidth() - 80, Game.getHeight() - 80, 60, 60, null);
-		int numCubes = Game.getWorld().getProperties(team).getCubeStorage();
-		g.setFont(Fonts.pixeled.deriveFont(14f));
-		g.setColor(Color.DARK_GRAY);
-		g.drawString("" + numCubes, Game.getWidth() - 80 + 53, Game.getHeight() - 80 + 65);
-		g.setColor(Color.WHITE);
-		g.drawString("" + numCubes, Game.getWidth() - 80 + 55, Game.getHeight() - 80 + 67);
+		if(lockOpen) {
+			g.drawImage(PowerCube.spr.getImage(), 20, Game.getHeight() - h - 60, 40, 40, null);
+    		int numCubes = Game.getWorld().getProperties(team).getCubeStorage();
+    		g.setFont(Fonts.pixeled.deriveFont(14f));
+    		g.setColor(Color.DARK_GRAY);
+    		g.drawString("x " + numCubes, 65, Game.getHeight() - h - 35 + 2);
+    		g.setColor(Color.WHITE);
+    		g.drawString("x " + numCubes, 65, Game.getHeight() - h - 35);
+		}else {
+    		g.drawImage(PowerCube.spr.getImage(), Game.getWidth() - 80, Game.getHeight() - 80, 60, 60, null);
+    		int numCubes = Game.getWorld().getProperties(team).getCubeStorage();
+    		g.setFont(Fonts.pixeled.deriveFont(14f));
+    		g.setColor(Color.DARK_GRAY);
+    		g.drawString("" + numCubes, Game.getWidth() - 80 + 53, Game.getHeight() - 80 + 65);
+    		g.setColor(Color.WHITE);
+    		g.drawString("" + numCubes, Game.getWidth() - 80 + 55, Game.getHeight() - 80 + 67);
+		}
 
 		if(draggingCube && Game.mouseHandler().isLeftPressed()) {
 			int ww = 60;
 			int hh = 60;
 			g.drawImage(cube.getImage(), Game.mouseLoc().x - ww/2, Game.mouseLoc().y - hh/2, ww, hh, null);
 		}
+	}
+	
+	public boolean isLockedOpen() {
+		return lockOpen;
+	}
+
+	public void setLockedOpen(boolean lockOpen) {
+		this.lockOpen = lockOpen;
+	}
+
+	public float getScale() {
+		return scale;
+	}
+
+	public void setScale(float scale) {
+		this.scale = scale;
 	}
 	
 }

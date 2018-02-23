@@ -374,6 +374,21 @@ public class Gameplay {
 		
 		if(Game.gameplay.getState() == GameState.TELEOP && !Game.isServer()) {
 			Game.getWorld().getProperties(Game.getWorld().getSelfPlayer().team).getVault().render(g);
+		}else if(Game.gameplay.getState() == GameState.TELEOP && Game.isServer()) {
+			Vault rVault = Game.getWorld().getProperties(Team.RED).getVault();
+			rVault.setLockedOpen(true);
+			rVault.setScale(1f);
+			rVault.render(g);
+			
+			AffineTransform tr = g.getTransform();
+			
+			g.translate(Game.getWidth() - 140, 0);
+			Vault bVault = Game.getWorld().getProperties(Team.BLUE).getVault();
+			bVault.setLockedOpen(true);
+			bVault.setScale(1f);
+			bVault.render(g);
+			
+			g.setTransform(tr);
 		}
 		
 //		g.setFont(Fonts.pixeled.deriveFont(16f));
