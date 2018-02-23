@@ -185,8 +185,8 @@ public class Player {
 		if(Game.isServer()) {
 //			if (getLocation().x < 20) {
 				Vector2 vel = base.getLinearVelocity();
-				System.out.println(vel.x);
-				if(Math.abs(vel.x - activeLinearX) > 10 || Math.abs(vel.y - activeLinearY) > 10) {
+//				System.out.println(vel.x);
+				if(Math.abs(vel.x - activeLinearX) > 50 || Math.abs(vel.y - activeLinearY) > 50) {
 					System.out.println("GLITCH");
 					double rot = base.getTransform().getRotation();
 					constructShip();
@@ -368,19 +368,19 @@ public class Player {
 //		}
 		
 		if(robot.isEnabled()){
-			if(robot.canMove()) {
-        		if(Game.keyHandler().isPressed(KeyEvent.VK_UP)){
-        			float speed = 10f;
-        			
-        			if(Game.keyHandler().isPressed(KeyEvent.VK_SHIFT)) speed *= 5; 
-        			
-        			Point2D.Float pt = Utils.polarToCartesian((float) Math.toRadians(Math.toDegrees(base.getTransform().getRotation()) + 90), speed);
-        			Vector2 vec = base.getWorldCenter().subtract(base.getWorldCenter().copy().add(pt.x, pt.y));
-        			base.applyForce(vec);
-        		}
-			}
+//			if(robot.canMove()) {
+//        		if(Game.keyHandler().isPressed(KeyEvent.VK_UP)){
+//        			float speed = 10f;
+//        			
+//        			if(Game.keyHandler().isPressed(KeyEvent.VK_SHIFT)) speed *= 5; 
+//        			
+//        			Point2D.Float pt = Utils.polarToCartesian((float) Math.toRadians(Math.toDegrees(base.getTransform().getRotation()) + 90), speed);
+//        			Vector2 vec = base.getWorldCenter().subtract(base.getWorldCenter().copy().add(pt.x, pt.y));
+//        			base.applyForce(vec);
+//        		}
+//			}
     		
-    		double speedMultiplier = Game.keyHandler().isPressed(KeyEvent.VK_SHIFT) ? 5 : 1;
+    		double speedMultiplier = Game.keyHandler().isPressed(KeyEvent.VK_SHIFT) ? 1 : 1;
     		speedMultiplier *= 5;
     		
     		double mechPower = 110 * speedMultiplier;
@@ -629,9 +629,9 @@ public class Player {
 		
 		if(!Robot.buildMode) robot.render(g);
 		
+		int gridSize = robot.getGridSize();
+		float gridBoxSize = Component.unitSize;
 		if(this == Game.getWorld().getSelfPlayer()){
-    		int gridSize = robot.getGridSize();
-    		float gridBoxSize = Component.unitSize;
     		
     		AffineTransform oldtrans = g.getTransform();
     		AffineTransform trans = new AffineTransform();
@@ -795,9 +795,26 @@ public class Player {
     		}
 			
 			g.setStroke(new BasicStroke(1));
-    		g.setTransform(oldtrans);
+			
+			g.setTransform(oldtrans);
     		
 		}
+		
+		AffineTransform tr = g.getTransform();
+		
+		AffineTransform trans = new AffineTransform();
+		
+		trans.concatenate(tr);
+//		trans.rotate(base.getTransform().getRotation(), getLocation().x, getLocation().y);
+		trans.translate(getLocation().x * GameObject.SCALE, getLocation().y * GameObject.SCALE);
+		trans.translate(-0.5 * gridBoxSize * gridSize, -0.5 * gridBoxSize * gridSize);
+		g.setTransform(trans);
+		
+		g.setColor(Color.WHITE);
+		g.setFont(Fonts.pixelmix.deriveFont(12f));
+		g.drawString(name, 0 - g.getFontMetrics().stringWidth(name)/2, 0);
+		
+		g.setTransform(tr);
 		
 //		base.render(g);
 	}

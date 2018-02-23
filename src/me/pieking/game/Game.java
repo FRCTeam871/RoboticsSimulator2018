@@ -18,6 +18,7 @@ import java.util.List;
 
 import javax.swing.ImageIcon;
 import javax.swing.JFrame;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.Timer;
 
@@ -276,7 +277,10 @@ public class Game {
 			ClientStarter.clientStarter.getClient().connect();
 			if (ClientStarter.clientStarter.getClient().isConnected()) {
 				System.out.println("Connected to the server.");
-				JoinPacket pack = new JoinPacket("Player " + System.currentTimeMillis(), "1", "1");
+//				String username = JOptionPane.showInputDialog(frame, "Enter a username:");
+				String username = "Team " + Rand.range(1, 8000);
+				// data can be polled from https://www.thebluealliance.com/api/v3/team/frc####?X-TBA-Auth-Key=****
+				JoinPacket pack = new JoinPacket(username, "1", "1");
 				Game.doPacket(pack);
 				Game.getWorld().setSelfPlayer(pack.getCreated());
 				
@@ -312,10 +316,13 @@ public class Game {
 
 		List<Packet> pack = new ArrayList<Packet>();
 		pack.addAll(packetQueue);
+//		System.out.println("packets: " + packetQueue.size());
+//		long start = System.currentTimeMillis();
 		for(Packet p : pack) {
 			if(p != null) p.doAction();
 		}
 		packetQueue.clear();
+//		System.out.println("took " + (System.currentTimeMillis()-start) + "ms");
 		
 		state = controllerManager.getState(0);
 		

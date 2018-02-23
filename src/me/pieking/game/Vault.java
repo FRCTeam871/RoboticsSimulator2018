@@ -301,14 +301,14 @@ public class Vault {
 		if(force == team) {
 			for(int i = 0; i < 5; i++) {
 				g.setColor(team == Team.BLUE ? blueLedCol : redLedCol);
-				g.fillRect(10 + 14+ (12 * i), Game.getHeight() - h - 10 + 14, 2*scale, 2*scale);
+				g.fillRect(10 + (7 * scale) + ((6 * scale) * i), Game.getHeight() - h - 10 + (7 * scale), 2*scale, 2*scale);
 			}
 		}else if(force_q == team) {
 			for(int i = 0; i < 5; i++) {
 				g.setColor(Color.DARK_GRAY);
-				g.fillRect(10 + 14+ (12 * i), Game.getHeight() - h - 10 + 14, 2*scale, 2*scale);
+				g.fillRect(10 + (7 * scale)+ ((6 * scale) * i), Game.getHeight() - h - 10 + (7 * scale), 2*scale, 2*scale);
 				g.setColor(team == Team.BLUE ? blueLedColPulse : redLedColPulse);
-				g.fillRect(10 + 14+ (12 * i), Game.getHeight() - h - 10 + 14, 2*scale, 2*scale);
+				g.fillRect(10 + (7 * scale)+ ((6 * scale) * i), Game.getHeight() - h - 10 + (7 * scale), 2*scale, 2*scale);
 			}
 		}
 		
@@ -329,7 +329,7 @@ public class Vault {
 				g.setColor(Color.DARK_GRAY);
 				g.fillRect(10 + (7*scale) + 38*scale*2 + ((6*scale) * i), Game.getHeight() - h - 10 + (7*scale), 2*scale, 2*scale);
 				g.setColor(team == Team.BLUE ? blueLedColPulse : redLedColPulse);
-				g.fillRect(10 + 14 + 38*scale*2 + (12 * i), Game.getHeight() - h - 10 + 14, 2*scale, 2*scale);
+				g.fillRect(10 + (7 * scale) + 38*scale*2 + ((6 * scale) * i), Game.getHeight() - h - 10 + (7 * scale), 2*scale, 2*scale);
 			}
 		}
 		

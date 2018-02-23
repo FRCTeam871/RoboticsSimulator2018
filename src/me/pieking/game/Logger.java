@@ -46,7 +46,8 @@ public class Logger {
 	public static enum ExitState {
 		UNKNOWN(-50),
 		OK(0),
-		SERVER_RUN_ERROR(101);
+		SERVER_RUN_ERROR(1), 
+		SERVER_DISCONNECT(2);
 		
 		public int code = 0;
 		

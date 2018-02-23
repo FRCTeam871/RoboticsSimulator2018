@@ -77,7 +77,7 @@ public class PowerCube {
 	}
 	
 	public void tick(){
-		if(Game.getTime() % 30 == 0 && Game.isServer()) {
+		if(Game.getTime() % 15 == 0 && Game.isServer()) {
 			sendServerMotion();
 		}
 	}

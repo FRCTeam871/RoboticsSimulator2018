@@ -50,11 +50,30 @@ public class KeyHandler implements KeyListener{
 //			inCommandThing = false;
 //		}
 		
-		if(e.getKeyCode() == KeyEvent.VK_NUMPAD5){
-			GameWorld.setRobotAligned(!GameWorld.isRobotAligned());
+		if(e.getKeyCode() == KeyEvent.VK_F4){
+			Game.toggleFullScreen();
+		}
+		
+		if(e.getKeyCode() == KeyEvent.VK_NUMPAD4){
+			Vars.showCollision = !Vars.showCollision;
+		}
+		
+		if(e.getKeyCode() == KeyEvent.VK_NUMPAD1){
+			Game.getWorld().useBoost(e.isControlDown() ? Team.RED : Team.BLUE);
+		}else if(e.getKeyCode() == KeyEvent.VK_NUMPAD2){
+			Game.getWorld().useForce(e.isControlDown() ? Team.RED : Team.BLUE);
+		}else if(e.getKeyCode() == KeyEvent.VK_NUMPAD3){
+			Game.getWorld().useLevitate(e.isControlDown() ? Team.RED : Team.BLUE);
+		}else if(e.getKeyCode() == KeyEvent.VK_NUMPAD0) {
+			Game.getWorld().resetPowerups();
 		}
 		
 		if(Game.getWorld().getSelfPlayer() != null){
+			
+			if(e.getKeyCode() == KeyEvent.VK_NUMPAD5){
+				GameWorld.setRobotAligned(!GameWorld.isRobotAligned());
+			}
+			
 			Player p = Game.getWorld().getSelfPlayer();
 			if(p.hasFocus()){
         		if(e.getKeyCode() == KeyEvent.VK_B){
@@ -75,25 +94,10 @@ public class KeyHandler implements KeyListener{
     					p.deleteSelected();
     				}
 				}
-				
-				if(e.getKeyCode() == KeyEvent.VK_F4){
-					Game.toggleFullScreen();
-				}
 			}
 			
 			if(e.getKeyCode() == KeyEvent.VK_NUMPAD6){
 				p.noClip = !p.noClip;
-			}else if(e.getKeyCode() == KeyEvent.VK_NUMPAD1){
-//				Game.getWorld().resetPowerups();
-				Game.getWorld().useBoost(e.isControlDown() ? Team.RED : Team.BLUE);
-			}else if(e.getKeyCode() == KeyEvent.VK_NUMPAD2){
-				Game.getWorld().useForce(e.isControlDown() ? Team.RED : Team.BLUE);
-			}else if(e.getKeyCode() == KeyEvent.VK_NUMPAD3){
-				Game.getWorld().useLevitate(e.isControlDown() ? Team.RED : Team.BLUE);
-			}else if(e.getKeyCode() == KeyEvent.VK_NUMPAD4){
-				Vars.showCollision = !Vars.showCollision;
-			}else if(e.getKeyCode() == KeyEvent.VK_NUMPAD0) {
-				Game.getWorld().resetPowerups();
 			}
 			
 			if(e.getKeyCode() == KeyEvent.VK_F8) {
@@ -107,7 +111,12 @@ public class KeyHandler implements KeyListener{
 				
 				Game.gameplay.voteToStart(Game.getWorld().getSelfPlayer());
 			}
-			
+		}
+		
+		if(Game.isServer()) {
+			if(e.getKeyCode() == KeyEvent.VK_V && Game.gameplay.getState() == GameState.WAITING_FOR_PLAYERS){
+				Game.gameplay.setState(GameState.SETUP);
+			}
 		}
 		
 		if(Game.getWorld().getSelfPlayer() != null) Game.getWorld().getSelfPlayer().robot.keyPressed(e);

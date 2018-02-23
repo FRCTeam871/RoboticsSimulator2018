@@ -699,14 +699,15 @@ public class GameWorld {
     			}
     			
     			boost.setTimer(boost.getTimer() - 1);
+    			
     			if(boost.getTimer() == 0){
-    				getProperties(Team.RED).setSwitchScoreMod(2);
-    				getProperties(Team.RED).setScaleScoreMod(2);
-    				getProperties(Team.BLUE).setSwitchScoreMod(2);
-    				getProperties(Team.BLUE).setScaleScoreMod(2);
+    				getProperties(Team.RED).setSwitchScoreMod(1);
+    				getProperties(Team.RED).setScaleScoreMod(1);
+    				getProperties(Team.BLUE).setSwitchScoreMod(1);
+    				getProperties(Team.BLUE).setScaleScoreMod(1);
     				
     				boost.setUsing(Team.NONE);
-    				if(boost.getUsing() != Team.NONE){
+    				if(boost.getQueued() != Team.NONE){
     					forceBoost(boost.getQueued());
     					boost.setQueued(Team.NONE);
     				}

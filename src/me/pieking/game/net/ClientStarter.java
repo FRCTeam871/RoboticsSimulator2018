@@ -76,7 +76,7 @@ public class ClientStarter {
 		String className = p.getClass().getSimpleName();
 //		System.out.println("write " + className + "|" + p.format());
 		
-		if(client.isConnected()) client.getServerConnection().sendTcp(className + "|" + p.format());
+		if(client.isConnected()) client.getServerConnection().sendUdp(className + "|" + p.format());
 	}
 	
 	public void recieve(String msg) throws ClassNotFoundException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {

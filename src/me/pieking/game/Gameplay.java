@@ -123,7 +123,7 @@ public class Gameplay {
 			case TELEOP:
 				if(Game.keyHandler().isPressed(KeyEvent.VK_F9)) setState(GameState.MATCH_END);
 				if(gameTime <= 0){
-//					setState(GameState.MATCH_END);
+					setState(GameState.MATCH_END);
 				}
 				
 				if(gameTime == 30 * 60) {
@@ -221,6 +221,9 @@ public class Gameplay {
 			g.setFont(Fonts.pixelmix.deriveFont(16f));
 			g.setColor(new Color(170, 120, 0));
 			String msg3 = "Press " + (Game.controllerState().isConnected ? "(A)" : "[V]") + " to vote for force start.";
+			if(Game.isServer() || !Game.isConnected()) {
+				msg3 = "Press " + (Game.controllerState().isConnected ? "(A)" : "[V]") + " to force start.";
+			}
 			g.drawString(msg3, Game.getWidth()/2 - g.getFontMetrics().stringWidth(msg3)/2, Game.getHeight()/2 + 80);
 			String msg4 = "" + numVoted + " of " + (int)Math.ceil(Game.getWorld().getPlayers().size() / 2d) + " needed.";
 			g.drawString(msg4, Game.getWidth()/2 - g.getFontMetrics().stringWidth(msg4)/2, Game.getHeight()/2 + 100);
@@ -430,7 +433,7 @@ public class Gameplay {
 				break;
 			case SETUP:
 				resetField();
-				setGameTime(2 * 60);
+				setGameTime(5 * 60);
 				Robot.setAllEnabled(false);
 				Game.getWorld().setCameraCentered(false);
 				
