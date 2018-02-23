@@ -259,6 +259,7 @@ public class Game {
 		LuaScriptLoader.init();
 		Sound.init();
 		Fonts.init();
+		Settings.loadConfig();
 		
 		gw = new GameWorld();
 		gameplay = new Gameplay();
@@ -280,7 +281,7 @@ public class Game {
 				String username = "Team " + teamNum;
 				
 				// data can be polled from https://www.thebluealliance.com/api/v3/team/frc####?X-TBA-Auth-Key=****
-				JoinPacket pack = new JoinPacket(username, "1", "1");
+				JoinPacket pack = new JoinPacket(username, "1", "1", getVersion());
 				Game.doPacket(pack);
 				Game.getWorld().setSelfPlayer(pack.getCreated());
 				
