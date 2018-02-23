@@ -20,7 +20,7 @@ public class UpdateCubeStoragePacket extends Packet {
 
 	@Override
 	public void doAction() {
-		System.out.println(redCubes + " " + blueCubes);
+//		System.out.println(redCubes + " " + blueCubes);
 		Game.getWorld().getProperties(Team.RED).setCubeStorage(redCubes);
 		Game.getWorld().getProperties(Team.BLUE).setCubeStorage(blueCubes);
 	}

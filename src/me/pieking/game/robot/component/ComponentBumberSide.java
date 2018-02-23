@@ -26,7 +26,7 @@ public class ComponentBumberSide extends Component {
 	@Override
 	public GameObject createBody(Player player){
 		
-		System.out.println(player.name + " " + player.team);
+//		System.out.println(player.name + " " + player.team);
 		
 		if(player.team == Team.RED) sprite = sprRed;
 		if(player.team == Team.BLUE) sprite = sprBlue;

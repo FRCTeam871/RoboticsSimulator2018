@@ -5,6 +5,7 @@ import java.awt.Graphics2D;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
@@ -150,7 +151,7 @@ public class GameWorld {
 		
 		double holePos = 0.5;
 		
-		System.out.println("scale = " + scale);
+//		System.out.println("scale = " + scale);
 		// left top
 		GameObject floor3 = new GameObject();
 		floor3.color = new Color(0f, 0.5f, 0f, 1f);
@@ -350,9 +351,12 @@ public class GameWorld {
 		
 		// create the switches with a random one of the possible orientations
 		
-		boolean[] switchOrientation = getRandomSwitchOrientation();
-		
-		setSwitchOrientation(switchOrientation);
+		if(Game.isServer() || !Game.isConnected()) {
+    		Scheduler.delayedTask(() -> {
+    			boolean[] switchOrientation = getRandomSwitchOrientation();
+        		setSwitchOrientation(switchOrientation);
+    		}, 20);
+		}
 		
 	}
 	
@@ -375,6 +379,7 @@ public class GameWorld {
 
 	public void setSwitchOrientation(boolean[] switchOrientation) {
 		
+		System.out.println(Arrays.toString(switchOrientation));
 		
 //		scales.add(balance);
 //		getWorld().addBody(balance.walls);
@@ -1231,12 +1236,15 @@ public class GameWorld {
 		List<ScalePlatform> sp = new ArrayList<ScalePlatform>();
 		for(Team t : getPlayingTeams()){
 			TeamProperties tp = getProperties(t);
+			if(tp.getSwitch() == null) continue;
 			sp.add(tp.getSwitch().getRedPlatform());
 			sp.add(tp.getSwitch().getBluePlatform());
 		}
 		
-		sp.add(scale.getBluePlatform());
-		sp.add(scale.getRedPlatform());
+		if(scale != null) {
+    		sp.add(scale.getBluePlatform());
+    		sp.add(scale.getRedPlatform());
+		}
 		
 		return sp;
 	}
