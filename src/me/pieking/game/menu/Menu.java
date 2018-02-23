@@ -66,7 +66,7 @@ public abstract class Menu {
 	
 	public final void iTick(){
 		tick();
-
+		
 		if(isFocused()){
     		for(int i = 0; i < buttons.size(); i++){
     			EButton b = buttons.get(i);

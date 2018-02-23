@@ -1283,7 +1283,8 @@ public class GameWorld {
 		exchanging.clear();
 		particles.clear();
 		
-		initializeWorld();
+		Scheduler.delayedTask(this::initializeWorld, 20);
+		
 		
 		for(Player p : players){
 			p.setLocation(new Point2D.Double(0, 0), 0);

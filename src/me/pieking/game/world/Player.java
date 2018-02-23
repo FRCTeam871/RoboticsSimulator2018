@@ -45,7 +45,7 @@ import me.pieking.game.FileSystem;
 import me.pieking.game.Game;
 import me.pieking.game.Location;
 import me.pieking.game.Utils;
-import me.pieking.game.Vars;
+import me.pieking.game.Settings;
 import me.pieking.game.gfx.Fonts;
 import me.pieking.game.gfx.Render;
 import me.pieking.game.gfx.ShipFileAccessory;
@@ -550,7 +550,7 @@ public class Player {
     		
 		}
 //		
-		if(Game.getTime() % 5 == 0 && !dead){
+		if(Game.getTime() % Settings.playerUpdateInterval == 0 && !dead){
 			sendServerMotion();
 		}
 //		
