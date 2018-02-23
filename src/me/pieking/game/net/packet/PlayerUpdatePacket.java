@@ -12,8 +12,10 @@ public class PlayerUpdatePacket extends Packet {
 	float ya;
 	float rot;
 	float rotA;
+	float height;
+	boolean climbing;
 	
-	public PlayerUpdatePacket(String username, String x, String y, String xa, String ya, String rot, String rotA) {
+	public PlayerUpdatePacket(String username, String x, String y, String xa, String ya, String rot, String rotA, String height, String climbing) {
 		this.user = username;
 		this.x = Float.parseFloat(x);
 		this.y = Float.parseFloat(y);
@@ -21,11 +23,17 @@ public class PlayerUpdatePacket extends Packet {
 		this.ya = Float.parseFloat(ya);
 		this.rot = Float.parseFloat(rot);
 		this.rotA = Float.parseFloat(rotA);
+		this.height = Float.parseFloat(height);
+		this.climbing = Boolean.parseBoolean(climbing);
+		
+		if(Math.abs(this.xa) < 0.01) this.xa = 0;
+		if(Math.abs(this.ya) < 0.01) this.ya = 0;
+		if(Math.abs(this.rotA) < 0.01) this.rotA = 0;
 	}
 
 	@Override
 	public String format() {
-		return user + "|" + x + "|" + y + "|" + xa + "|" + ya + "|" + rot + "|" + rotA;
+		return user + "|" + x + "|" + y + "|" + xa + "|" + ya + "|" + rot + "|" + rotA + "|" + height + "|" + climbing;
 	}
 
 	@Override
@@ -49,8 +57,14 @@ public class PlayerUpdatePacket extends Packet {
 ////			p.base.getTransform().setRotation(rot);
 //			p.base.translate(x, y);
 //			System.out.println(p.base.getWorldCenter());
-			p.base.setLinearVelocity(xa, ya);
-			p.base.setAngularVelocity(rotA);
+			p.setActiveLinearVelocity(xa, ya);
+			p.setActiveAngularVelocity(rotA);
+			
+			p.setHeight(height);
+			p.setClimbing(climbing);
+			
+//			p.base.setLinearVelocity(xa, ya);
+//			p.base.setAngularVelocity(rotA);
 			
 //			p.constructShip();
 			

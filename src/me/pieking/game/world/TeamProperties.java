@@ -2,6 +2,7 @@ package me.pieking.game.world;
 
 import java.util.HashMap;
 
+import me.pieking.game.Game;
 import me.pieking.game.Vault;
 
 public class TeamProperties {
@@ -18,19 +19,23 @@ public class TeamProperties {
 	private boolean usedLevitate = false;
 	private Vault vault;
 
-	public TeamProperties(Switch teamSwitch, GameObject exchangeSensor, Vault vault) {
-		this.teamSwitch = teamSwitch;
-		this.exchangeSensor = exchangeSensor;
-		this.vault = vault;
-		
+	public TeamProperties() {
 		penalties.put(Pentalty.FOUL, 0);
 		penalties.put(Pentalty.TECH_FOUL, 0);
 	}
 
+	public void setSwitch(Switch teamSwitch) {
+		this.teamSwitch = teamSwitch;
+	}
+	
 	public Switch getSwitch() {
 		return teamSwitch;
 	}
 
+	public void setExchangeSensor(GameObject exchangeSensor) {
+		this.exchangeSensor = exchangeSensor;
+	}
+	
 	public GameObject getExchangeSensor() {
 		return exchangeSensor;
 	}
@@ -41,14 +46,16 @@ public class TeamProperties {
 
 	public void setCubeStorage(int cubeStorage) {
 		this.cubeStorage = cubeStorage;
+		
+		Game.getWorld().updateCubeStorage();
 	}
 	
 	public void addCubeStorage(int cubeStorage) {
-		this.cubeStorage += cubeStorage;
+		setCubeStorage(this.cubeStorage + cubeStorage);
 	}
 	
 	public void removeCubeStorage(int cubeStorage) {
-		this.cubeStorage = Math.max(0, cubeStorage);
+		setCubeStorage(Math.max(0, this.cubeStorage - cubeStorage));
 	}
 	
 	public HashMap<Pentalty, Integer> getPenalties() {
@@ -126,7 +133,7 @@ public class TeamProperties {
 	public void setLevitateLevel(int levitateLevel) {
 		this.levitateLevel = levitateLevel;
 	}
-
+	
 	public Vault getVault() {
 		return vault;
 	}

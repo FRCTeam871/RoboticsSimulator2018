@@ -103,7 +103,7 @@ protected List<EToggle> toggles = new ArrayList<EToggle>();
 		
 		selected = null;
 		if(!Game.controllerState().isConnected) hover = new Point(-1, -1);
-		System.out.println(hover);
+//		System.out.println(hover);
 		for(int x = 0; x < gridW; x++){
 			for(int y = 0; y < gridH; y++){
 				
@@ -289,8 +289,8 @@ protected List<EToggle> toggles = new ArrayList<EToggle>();
 					hover = new Point(0, 0);
 				}else {
 					int newHover = hover.y + 1;
-					if(newHover < 0) newHover += 4;
-					if(newHover > 3) newHover -= 4;
+					if(newHover < 0) newHover += avail.size()+1;
+					if(newHover > avail.size()) newHover -= avail.size()+1;
 					System.out.println(newHover);
 					hover = new Point(0, newHover);
 				}
@@ -299,8 +299,8 @@ protected List<EToggle> toggles = new ArrayList<EToggle>();
 					hover = new Point(0, 0);
 				}else {
 					int newHover = hover.y - 1;
-					if(newHover < 0) newHover += 4;
-					if(newHover > 3) newHover -= 4;
+					if(newHover < 0) newHover += avail.size()+1;
+					if(newHover > avail.size()) newHover -= avail.size()+1;
 					System.out.println(newHover);
 					hover = new Point(0, newHover);
 				}

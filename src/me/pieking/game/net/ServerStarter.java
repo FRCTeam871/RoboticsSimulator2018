@@ -14,13 +14,17 @@ import me.pieking.game.Scheduler;
 import me.pieking.game.net.packet.JoinPacket;
 import me.pieking.game.net.packet.LeavePacket;
 import me.pieking.game.net.packet.Packet;
+import me.pieking.game.net.packet.SetTeamPacket;
 import me.pieking.game.net.packet.ShipComponentHealthPacket;
 import me.pieking.game.net.packet.ShipDataPacket;
 import me.pieking.game.robot.component.Component;
 import me.pieking.game.world.Player;
+import me.pieking.game.world.Balance.Team;
 
 public class ServerStarter {
 
+	public static final int DEFAULT_PORT = 50001;
+	
 	public static ServerStarter serverStarter;
 	
 	private Server server;
@@ -33,7 +37,7 @@ public class ServerStarter {
 	
 	private ServerStarter() {
 		try {
-			server = new Server(1341, 1341);
+			server = new Server(DEFAULT_PORT, DEFAULT_PORT);
 			server.setListener(new ServerListener(this));
 			if (server.isConnected()) {
 				System.out.println("Started server successfully.");
@@ -63,7 +67,7 @@ public class ServerStarter {
 		String[] args = msg.split("\\|");
 		
 		//System.out.println(msg);
-		//System.out.println("server got " + msg);
+//		System.out.println("server got " + msg);
 		
 		String className = args[0];
 		Class<?> clazz = Class.forName("me.pieking.game.net.packet." + className);
@@ -78,14 +82,16 @@ public class ServerStarter {
 		
 		Packet p = (Packet) clazz.getConstructor(types).newInstance((Object[]) otherArgs);
 		
-		p.doAction();
-		
 		if(p instanceof JoinPacket){
+			p.doAction();
 			JoinPacket jp = (JoinPacket)p;
 			Player pl = jp.getCreated();
 			if(pl != null) {
 				connections.put(from, pl);
 				awaitingInitialData.remove(from);
+				pl.team = connections.size() % 2 == 0 ? Team.RED : Team.BLUE;
+				SetTeamPacket stp = new SetTeamPacket(pl.name, pl.team.toString());
+				sendToAll(stp);
 			}
 			
 //			if(Game.startGameTimer == -1 && Game.getWorld().getPlayers().size() > 1){
@@ -109,6 +115,9 @@ public class ServerStarter {
     						ShipDataPacket sdp = new ShipDataPacket(pl2.name, decoded);
     						writePacket(from, sdp);
     						
+    						SetTeamPacket stp = new SetTeamPacket(pl2.name, pl2.team.toString());
+    						writePacket(from, stp);
+    						
     						Scheduler.delayedTask(() -> {
     							for(Component c : pl2.robot.getComponents()){
         							ShipComponentHealthPacket schp = new ShipComponentHealthPacket(pl2.name, c.bounds.x + "", c.bounds.y + "", c.health + "");
@@ -128,7 +137,10 @@ public class ServerStarter {
 			//pl.respawn();
 			
 		}else if(p instanceof LeavePacket){
+			p.doAction();
 			from.close();
+		}else {
+			Game.queuePacket(p);
 		}
 		
 //		if(p instanceof SetLocationPacket){

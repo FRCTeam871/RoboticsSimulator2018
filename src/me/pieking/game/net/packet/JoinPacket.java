@@ -29,7 +29,7 @@ public class JoinPacket extends Packet {
 	public void doAction() {
 		System.out.println("make2 player " + user);
 		if(Game.getWorld().getPlayer(user) == null){
-			Player pl = new Player(user, x, y, Team.NONE);
+			Player pl = new Player(user, x, y, Team.RED);
 			System.out.println(pl);
 			Game.getWorld().addPlayer(pl);
 			created = pl;

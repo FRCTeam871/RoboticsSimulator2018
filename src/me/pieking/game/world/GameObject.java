@@ -13,6 +13,7 @@ import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.dyn4j.collision.Filter;
 import org.dyn4j.dynamics.Body;
 import org.dyn4j.dynamics.BodyFixture;
 import org.dyn4j.geometry.AABB;
@@ -25,7 +26,7 @@ import me.pieking.game.robot.component.Component;
 
 public class GameObject extends Body {
 	
-	public static double DEFAULT_SCALE = 60.0;
+	public static double DEFAULT_SCALE = 50.0;
 	public static double SCALE = DEFAULT_SCALE;
 	public static double DESIRED_SCALE = DEFAULT_SCALE;
 	public static double ZOOM_SCALE = 0.0;
@@ -175,6 +176,18 @@ public class GameObject extends Body {
 			Stroke st = g.getStroke();
 			g.setStroke(str);
 			Graphics2DRenderer.render(g, convex, scale, color);
+			Vector2 cen = convex.getCenter();
+			
+			AffineTransform tr = g.getTransform();
+			g.rotate(-getTransform().getRotation());
+			
+			g.setColor(Color.BLACK);
+			Filter f = fixture.getFilter();
+			if(f instanceof GameObjectFilter) {
+				g.drawString(((GameObjectFilter) f).type.toString(), (int)cen.x, (int)cen.y);
+			}
+			g.setTransform(tr);
+			
 			g.setStroke(st);
 		}
 		

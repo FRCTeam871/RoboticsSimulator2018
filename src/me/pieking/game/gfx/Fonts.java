@@ -34,7 +34,7 @@ public class Fonts {
 		
 		//===================
 		
-		is = Fonts.class.getResourceAsStream("/fonts/beef'd.ttf");
+		is = Fonts.class.getResourceAsStream("/fonts/Beef'd.ttf");
 		
 		try {
 			Font font2 = Font.createFont(Font.TRUETYPE_FONT, is);

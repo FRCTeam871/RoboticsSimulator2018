@@ -13,6 +13,7 @@ import java.awt.event.InputEvent;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.ImageIcon;
@@ -23,6 +24,7 @@ import javax.swing.Timer;
 import com.studiohartman.jamepad.ControllerManager;
 import com.studiohartman.jamepad.ControllerState;
 import com.studiohartman.jamepad.ControllerUnpluggedException;
+import com.sun.java.swing.plaf.windows.resources.windows;
 
 import me.pieking.game.events.KeyHandler;
 import me.pieking.game.events.MouseHandler;
@@ -49,15 +51,15 @@ import me.pieking.game.world.PowerCube;
 public class Game {
 
 	/** The width of the window content, in pixels. */
-	private static final int WIDTH = 800;
+	private static int WIDTH = 800;
 	/** The height of the window content, in pixels. */
-	private static final int HEIGHT = 600;
+	private static int HEIGHT = 600;
 	
 	/** The name of the game. */
 	private static final String NAME = "Robotics Simulator 2018";
 	
 	/** Follows Semantic Versioning as per <a href="// https://semver.org/">semver.org</a>.*/
-	private static final String VERSION = "0.2.0"; 
+	private static final String VERSION = "0.2.0 - playtest"; 
 	
 	/** Whether the game is running or not. */
 	private static boolean running = false;
@@ -91,6 +93,11 @@ public class Game {
 	private static ControllerState state;
 	private static boolean fullScreen;
 	private static JPanel jp;
+	
+	public static final boolean QUICK_CONNECT = true;
+	public static final boolean GAMEPLAY_DEBUG = true;
+	
+	public static List<Packet> packetQueue = new ArrayList<Packet>();
 	
 	/**
 	 * Run the game with arguments
@@ -169,6 +176,24 @@ public class Game {
     		controllerManager = new ControllerManager();
     		controllerManager.initSDLGamepad();
     		state = controllerManager.getState(0);
+		}
+		
+		if(isServer()) {
+			
+			boolean smallServer = true;
+			
+			if(smallServer) {
+    			HEIGHT = 400;
+    			GameObject.SCALE = 15.3;
+    			GameObject.DESIRED_SCALE = 15.3;
+			}else {
+				HEIGHT = 600;
+				GameObject.SCALE = 23;
+				GameObject.DESIRED_SCALE = 23;
+			}
+			
+			WIDTH = (int) (HEIGHT * 2.4625);
+			
 		}
 		
 //		try {
@@ -284,6 +309,13 @@ public class Game {
 	private static void tick(){
 		
 		frame.setTitle(NAME + (isServer() ? " (Server) " : "") + " v" + VERSION + " | " + fps + " FPS " + tps + " TPS");
+
+		List<Packet> pack = new ArrayList<Packet>();
+		pack.addAll(packetQueue);
+		for(Packet p : pack) {
+			if(p != null) p.doAction();
+		}
+		packetQueue.clear();
 		
 		state = controllerManager.getState(0);
 		
@@ -404,7 +436,7 @@ public class Game {
 	 * @param pack - the {@link Packet} to process
 	 */
 	public static void doPacket(Packet pack){
-		if(!isServer()) ClientStarter.clientStarter.writePacket(pack);
+		sendPacket(pack);
 		pack.doAction();
 	}
 	
@@ -446,6 +478,11 @@ public class Game {
 		} catch (ControllerUnpluggedException e) {
 			e.printStackTrace();
 		}
+	}
+
+	public static boolean isConnected() {
+		if(ClientStarter.clientStarter == null || ClientStarter.clientStarter.getClient() == null) return false;
+		return ClientStarter.clientStarter.getClient().isConnected();
 	}
 	
 	public static void toggleFullScreen(){
@@ -549,6 +586,10 @@ public class Game {
 			t.start();
 			
 		} catch (AWTException e1) {}
+	}
+
+	public static void queuePacket(Packet p) {
+		packetQueue.add(p);
 	}
 	
 }

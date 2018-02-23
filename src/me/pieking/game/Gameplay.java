@@ -11,19 +11,25 @@ import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.dyn4j.dynamics.Body;
-
 import me.pieking.game.gfx.Fonts;
 import me.pieking.game.gfx.Render;
 import me.pieking.game.menu.SelectScriptMenu;
+import me.pieking.game.net.ServerStarter;
+import me.pieking.game.net.packet.ChoseAutonPacket;
+import me.pieking.game.net.packet.PlayerUpdatePacket;
+import me.pieking.game.net.packet.SetGameTimePacket;
+import me.pieking.game.net.packet.SetStatePacket;
+import me.pieking.game.net.packet.SetTeamPacket;
+import me.pieking.game.net.packet.UpdateScorePacket;
+import me.pieking.game.net.packet.VotePacket;
 import me.pieking.game.robot.Robot;
+import me.pieking.game.robot.component.ClawGrabberComponent;
+import me.pieking.game.robot.component.Component;
 import me.pieking.game.scripting.LuaScript;
 import me.pieking.game.sound.Sound;
 import me.pieking.game.sound.SoundClip;
 import me.pieking.game.world.Balance.Team;
-import me.pieking.game.world.GameObject;
 import me.pieking.game.world.Player;
-import me.pieking.game.world.PowerCube;
 
 public class Gameplay {
 
@@ -52,6 +58,7 @@ public class Gameplay {
 	private List<Player> bluePlayers = new ArrayList<Player>();
 
 	private List<Player> voted = new ArrayList<Player>();
+	private List<Player> readyToStart = new ArrayList<Player>();
 	private List<Player> crossedAutoLine = new ArrayList<Player>();
 	
 	private int gameTime = ((2 * 60) + 30) * 60;
@@ -90,11 +97,17 @@ public class Gameplay {
 				
 				break;
 			case SETUP:
-				if(gameTime <= 0){
+				if(gameTime <= 0 || Game.GAMEPLAY_DEBUG){
 					setState(GameState.AUTON);
 				}
+				
+				if(readyToStart.size() < Game.getWorld().getPlayers().size()) {
+					setGameTime(2 * 60);
+				}
+				
 				break;
 			case AUTON:
+				if(Game.keyHandler().isPressed(KeyEvent.VK_F10)) setState(GameState.TELEOP);
 				if(gameTime <= 0){
 					setState(GameState.TELEOP);
 				}else{
@@ -128,8 +141,15 @@ public class Gameplay {
 				break;
 		}
 		
-		// decrease the remaining game time if its more than 0
-		if(gameTime > 0) gameTime--;
+		if(Game.isServer() || !Game.isConnected()) {
+    		// decrease the remaining game time if its more than 0
+    		if(gameTime > 0) gameTime--;
+    		
+    		if(Game.isServer()) {
+        		SetGameTimePacket sgtp = new SetGameTimePacket(gameTime + "");
+        		ServerStarter.serverStarter.sendToAll(sgtp);
+    		}
+		}
 	}
 	
 	/**
@@ -299,7 +319,11 @@ public class Gameplay {
     		String timeS = minutesStr + ":" + secondsStr;
     		g.setColor(Color.DARK_GRAY);
     		g.drawString(timeS, Game.getWidth()/2 - g.getFontMetrics().stringWidth(timeS)/2 - 3, scoreBoardY - 34 - 3);
-    		g.setColor(Game.getWorld().getSelfPlayer().team.color);
+    		if(Game.isServer()) {
+    			g.setColor(Team.RED.color);
+    		}else {
+    			g.setColor(Game.getWorld().getSelfPlayer().team.color);
+    		}
     		g.drawString(timeS, Game.getWidth()/2 - g.getFontMetrics().stringWidth(timeS)/2, scoreBoardY - 34);
     		
     		g.setFont(Fonts.pixelLCD.deriveFont(28f));
@@ -326,34 +350,35 @@ public class Gameplay {
     		g.drawString("" + blueScore, Game.getWidth()/2 + (colonWidth), scoreBoardY);
     		
     		// lifter height
-    		
-    		double roboHeight = 0.0;
-    		if(Game.getWorld().getSelfPlayer().isClimbing()) {
-    			roboHeight = 1 - Game.getWorld().getSelfPlayer().getHeight();
+    		if(!Game.isServer()) {
+    			double roboHeight = 0.0;
+        		if(Game.getWorld().getSelfPlayer().isClimbing()) {
+        			roboHeight = 1 - Game.getWorld().getSelfPlayer().getHeight();
+        		}
+        		
+        		g.setColor(Color.DARK_GRAY);
+        		g.fillRect(Game.getWidth() - 20, Game.getHeight() - 250 -(int)(100 * roboHeight), 10, 110);
+        		
+        		double clawHeight = Game.getWorld().getSelfPlayer().getHeight();
+        		
+        		if(roboHeight > 0) clawHeight = 1;
+        		
+        		g.setColor(Color.LIGHT_GRAY);
+        		g.fillRect(Game.getWidth() - 20 - 50, Game.getHeight() - 250 + 100-(int)(100 * clawHeight), 50, 10);
+        		
+        		g.setColor(Color.LIGHT_GRAY);
+        		g.fillRect(Game.getWidth() - 20 - 50 + 10, Game.getHeight() - 250 + 10 + 100-(int)(100 * roboHeight), 50, 50);
     		}
-    		
-    		g.setColor(Color.DARK_GRAY);
-    		g.fillRect(Game.getWidth() - 20, Game.getHeight() - 250 -(int)(100 * roboHeight), 10, 110);
-    		
-    		double clawHeight = Game.getWorld().getSelfPlayer().getHeight();
-    		
-    		if(roboHeight > 0) clawHeight = 1;
-    		
-    		g.setColor(Color.LIGHT_GRAY);
-    		g.fillRect(Game.getWidth() - 20 - 50, Game.getHeight() - 250 + 100-(int)(100 * clawHeight), 50, 10);
-    		
-    		g.setColor(Color.LIGHT_GRAY);
-    		g.fillRect(Game.getWidth() - 20 - 50 + 10, Game.getHeight() - 250 + 10 + 100-(int)(100 * roboHeight), 50, 50);
     		
 		}
 		
-		if(Game.gameplay.getState() == GameState.TELEOP) {
+		if(Game.gameplay.getState() == GameState.TELEOP && !Game.isServer()) {
 			Game.getWorld().getProperties(Game.getWorld().getSelfPlayer().team).getVault().render(g);
 		}
 		
-		g.setFont(Fonts.pixeled.deriveFont(16f));
-		g.setColor(Color.GREEN);
-		g.drawString("" + state, 6, 24);
+//		g.setFont(Fonts.pixeled.deriveFont(16f));
+//		g.setColor(Color.GREEN);
+//		g.drawString("" + state, 6, 24);
 		
 	}
 	
@@ -375,16 +400,22 @@ public class Gameplay {
 	public void setState(GameState state){
 		this.state = state;
 		
+		if(Game.isServer()) {
+			SetStatePacket ssp = new SetStatePacket(state.toString());
+			ServerStarter.serverStarter.sendToAll(ssp);
+		}
+		
 		switch (state) {
 			case WAITING_FOR_PLAYERS:
-				gameTime = 2 * 60;
+				setGameTime(2 * 60);
 				Robot.setAllEnabled(false);
 				resetField();
 				voted.clear();
 				Game.getWorld().setCameraCentered(true);
 				break;
 			case SETUP:
-				gameTime = 2 * 60;
+				resetField();
+				setGameTime(2 * 60);
 				Robot.setAllEnabled(false);
 				Game.getWorld().setCameraCentered(false);
 				
@@ -401,23 +432,27 @@ public class Gameplay {
 				
 				for(int i = 0; i < Math.min(redPlayers.size(), 3); i++){
 					Player p = redPlayers.get(i);
-					p.setLocation(redSpawns[i], Math.toRadians(90));
-				}
-				for(int i = 0; i < Math.min(bluePlayers.size(), 3); i++){
-					Player p = bluePlayers.get(i);
-					p.setLocation(blueSpawns[i], Math.toRadians(-90));
+					setLocation(p, redSpawns[i], Math.toRadians(90));
 				}
 				
-				SelectScriptMenu ssm = new SelectScriptMenu(Game.getWorld().getSelfPlayer().getRobot());
-				Render.showMenu(ssm);
-				new Thread(() -> {
-					while(ssm.isFocused()) {
-						gameTime = 2 * 60;
-						try {
-							Thread.sleep(100);
-						} catch (InterruptedException e) {}
-					}
-				}).start();
+				for(int i = 0; i < Math.min(bluePlayers.size(), 3); i++){
+					Player p = bluePlayers.get(i);
+					setLocation(p, blueSpawns[i], Math.toRadians(-90));
+				}
+				
+				if(!Game.isServer() && !Game.GAMEPLAY_DEBUG) {
+					Game.getWorld().getSelfPlayer().getRobot().setAutonScript(null);
+    				SelectScriptMenu ssm = new SelectScriptMenu(Game.getWorld().getSelfPlayer().getRobot());
+    				Render.showMenu(ssm);
+    				new Thread(() -> {
+    					while(ssm.isFocused()) {
+    						try {
+    							Thread.sleep(100);
+    						} catch (InterruptedException e) {}
+    					}
+    					readyToStart(Game.getWorld().getSelfPlayer());
+    				}).start();
+				}
 				
 				break;
 			case AUTON:
@@ -425,10 +460,22 @@ public class Gameplay {
 				Game.getWorld().getProperties(Team.RED).setSwitchScoreMod(2);
 				Game.getWorld().getProperties(Team.BLUE).setScaleScoreMod(2);
 				Game.getWorld().getProperties(Team.BLUE).setSwitchScoreMod(2);
-				gameTime = 15 * 60; // 15s
+				setGameTime(15 * 60); // 15s
 				Robot.setAllEnabled(false);
-				LuaScript ls = Game.getWorld().getSelfPlayer().getRobot().getAutonScript();
-				if(ls != null) ls.run();
+				
+//				for(Player p : Game.getWorld().getPlayers()) {
+//					Robot r = p.getRobot();
+//					for(Component comp : r.getComponents()) {
+//						if(comp instanceof ClawGrabberComponent) {
+//							((ClawGrabberComponent) comp).setHasCube(true);
+//						}
+//					}
+//				}
+				
+				if(!Game.isServer()) {
+    				LuaScript ls = Game.getWorld().getSelfPlayer().getRobot().getAutonScript();
+    				if(ls != null) ls.run();
+				}
 				
 				s_startAuton.stop();
 				s_startAuton.start();
@@ -438,22 +485,34 @@ public class Gameplay {
 				Game.getWorld().getProperties(Team.RED).setCubeStorage(14);
 				Game.getWorld().getProperties(Team.RED).setScaleScoreMod(1);
 				Game.getWorld().getProperties(Team.RED).setSwitchScoreMod(1);
+				Game.getWorld().getProperties(Team.BLUE).setCubeStorage(14);
 				Game.getWorld().getProperties(Team.BLUE).setScaleScoreMod(1);
 				Game.getWorld().getProperties(Team.BLUE).setSwitchScoreMod(1);
-				gameTime = 135 * 60; // 2m 15s
+				setGameTime(135 * 60); // 2m 15s
 				Robot.setAllEnabled(true);
-				LuaScript ls2 = Game.getWorld().getSelfPlayer().getRobot().getAutonScript();
-				if(ls2 != null) ls2.stop();
+				
+				if(!Game.isServer()) {
+    				LuaScript ls2 = Game.getWorld().getSelfPlayer().getRobot().getAutonScript();
+    				if(ls2 != null) ls2.stop();
+				}
 				
 				s_startTeleop.stop();
 				s_startTeleop.start();
 				break;
 			case MATCH_END:
-				gameTime = 10 * 60; // 2m 15s
+				
+				if(Game.isServer()) {
+					UpdateScorePacket usp = new UpdateScorePacket(Game.getWorld().getProperties(Team.RED).getScore() + "", Game.getWorld().getProperties(Team.BLUE).getScore() + "");
+					ServerStarter.serverStarter.sendToAll(usp);
+				}
+				
+				setGameTime(10 * 60); // 10s
 				Robot.setAllEnabled(false);
 				
 				for(Player p : Game.getWorld().getPlayers()) {
-					if(p.base.isInContact(Game.getWorld().getPlatform(p.team))) {
+					if(p.isClimbing() && p.getHeight() < 0.5) {
+						Game.getWorld().getProperties(p.team).addScore(30);
+					}else if(p.base.isInContact(Game.getWorld().getPlatform(p.team))) {
 						Game.getWorld().getProperties(p.team).addScore(5);
 					}
 				}
@@ -467,6 +526,14 @@ public class Gameplay {
 		
 	}
 	
+	private void setLocation(Player p, Point2D pt, double rot) {
+		p.setLocation(pt, rot);
+		if(Game.isServer()) {
+			PlayerUpdatePacket pup = p.createUpdatePacket();
+			ServerStarter.serverStarter.sendToAll(pup);
+		}
+	}
+
 	private void resetField() {
 		Game.getWorld().reset();
 	}
@@ -488,7 +555,23 @@ public class Gameplay {
 	}
 
 	public void voteToStart(Player player) {
-		if(!voted.contains(player)) voted.add(player);
+		if(!voted.contains(player)) {
+			if(player == Game.getWorld().getSelfPlayer()) {
+				VotePacket vp = new VotePacket(player.name);
+				Game.sendPacket(vp);
+			}
+			voted.add(player);
+		}
+	}
+
+	public void readyToStart(Player player) {
+		if(!readyToStart.contains(player)) {
+			if(player == Game.getWorld().getSelfPlayer()) {
+				ChoseAutonPacket vp = new ChoseAutonPacket(player.name);
+				Game.sendPacket(vp);
+			}
+			readyToStart.add(player);
+		}
 	}
 	
 }

@@ -6,6 +6,7 @@ import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.event.KeyEvent;
 import java.awt.geom.AffineTransform;
+import java.awt.geom.Point2D;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
@@ -25,6 +26,7 @@ import java.util.Scanner;
 
 import org.dyn4j.dynamics.Body;
 import org.dyn4j.dynamics.BodyFixture;
+import org.dyn4j.geometry.Transform;
 
 import me.pieking.game.FileSystem;
 import me.pieking.game.Game;
@@ -49,6 +51,8 @@ public class Robot {
 	private boolean enabled = true;
 	
 	private LuaScript autonScript;
+
+	private boolean canMove = true;
 	
 	public Robot(int size, List<Component> comp, Player pl) {
 		this.comp = comp;
@@ -73,6 +77,29 @@ public class Robot {
 			b.translate(pl.getLocation().x - (0.5 * gridSize * Component.unitSize) + Component.unitSize/2, pl.getLocation().y - (0.5 * gridSize * Component.unitSize) + Component.unitSize/2);
 			b.rotate(pl.base.getTransform().getRotation(), pl.base.getWorldCenter().x, pl.base.getWorldCenter().y);
 			bods.add(b);
+			c.lastBody = b;
+		}
+		
+		return bods;
+	}
+	
+	public List<BodyFixture> constructFixtures(){
+		List<BodyFixture> bods = new ArrayList<BodyFixture>();
+		
+		for(Component c : comp){
+			GameObject b = c.createBody(pl);
+			
+			for(BodyFixture bf : b.getFixtures()) {
+				bf.setRestitution(0);
+				bf.setFriction(1);
+				bf.getShape().rotate(Math.toRadians(c.rot));
+				bf.getShape().translate(c.bounds.x * Component.unitSize, c.bounds.y * Component.unitSize);
+				bf.getShape().translate(-c.renderOfs.x * Component.unitSize, -c.renderOfs.y * Component.unitSize);
+				bf.getShape().translate(pl.getLocation().x - (0.5 * gridSize * Component.unitSize) + Component.unitSize/2, pl.getLocation().y - (0.5 * gridSize * Component.unitSize) + Component.unitSize/2);
+				bf.getShape().rotate(pl.base.getTransform().getRotation(), pl.base.getWorldCenter().x, pl.base.getWorldCenter().y);
+				bods.add(bf);
+			}
+			
 			c.lastBody = b;
 		}
 		
@@ -110,11 +137,15 @@ public class Robot {
 	
 	public void keyPressed(KeyEvent e){
 		if(pl.dead) return;
+		if(!enabled) return;
+		if(!canMove) return;
 		if(pl.hasFocus()){
+			boolean action = false;
     		for(Component c : comp){
     			if(c instanceof ActivatableComponent){
     				ActivatableComponent ac = (ActivatableComponent) c;
     				if(ac.actKeys.contains(e.getKeyCode())) {
+    					action = true;
     					
     					if(ac.toggleMode) {
     						ac.toggle();
@@ -134,16 +165,22 @@ public class Robot {
     				}
     			}
     		}
+    		
+//    		if(action) pl.constructShip();
 		}
 	}
 	
 	public void keyReleased(KeyEvent e){
 		if(pl.dead) return;
+		if(!enabled) return;
+		if(!canMove) return;
 		if(pl.hasFocus()){
+			boolean action = false;
     		for(Component c : comp){
     			if(c instanceof ActivatableComponent){
     				ActivatableComponent ac = (ActivatableComponent) c;
     				if(ac.deactKeys.contains(e.getKeyCode()) && !ac.toggleMode) {
+    					action = true;
     					ac.deactivate();
     					if(pl == Game.getWorld().getSelfPlayer()){
     						ShipComponentActivatePacket scap = new ShipComponentActivatePacket(pl.name, ac.bounds.x + "", ac.bounds.y + "", false + "");
@@ -152,6 +189,7 @@ public class Robot {
     				}
     			}
     		}
+//    		if(action) pl.constructShip();
 		}
 	}
 	
@@ -160,6 +198,27 @@ public class Robot {
 		cm.addAll(comp);
 		for(Component c : cm){
 			c.tick(pl);
+			if(c.lastBody.getWorldCenter().distance(pl.base.getWorldCenter()) > 10) {
+				System.out.println("==================");
+				System.out.println("= Critical Error =");
+				System.out.println("==================");
+//				pl.constructShip();
+			}
+			
+			
+			GameObject bod = c.lastBody;
+//			System.out.println(bod.getWorldCenter() + " " + (bod.getWorldCenter().x == bod.getWorldCenter().x));
+			if(bod.getWorldCenter().x != bod.getWorldCenter().x || bod.getWorldCenter().y != bod.getWorldCenter().y || bod.getWorldCenter().x < 0 ||bod.getWorldCenter().x > 60 || bod.getWorldCenter().y < 0 || bod.getWorldCenter().y > 30) {
+				System.out.println("==================");
+				System.out.println("= Critical Error =");
+				System.out.println("==================");
+				pl.base = new GameObject();
+				pl.constructShip();
+//				pl.base.setTransform(new Transform());
+//				bod.setTransform(new Transform());
+				pl.setLocation(new Point2D.Float(30, 10), 0);
+    		}
+			
 		}
 	}
 	
@@ -543,6 +602,9 @@ public class Robot {
 		this.enabled = enabled;
 		
 		System.out.println("enabled = " + enabled);
+		
+		setCanMove(enabled);
+		
 		if(!enabled){
 			for(Component c : getComponents()){
 				if(c instanceof ActivatableComponent){
@@ -564,6 +626,14 @@ public class Robot {
 
 	public void setAutonScript(LuaScript autonScript) {
 		this.autonScript = autonScript;
+	}
+
+	public boolean canMove() {
+		return canMove ;
+	}
+	
+	public void setCanMove(boolean canMove) {
+		this.canMove = canMove;
 	}
 	
 }
