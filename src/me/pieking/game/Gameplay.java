@@ -8,6 +8,8 @@ import java.awt.event.KeyEvent;
 import java.awt.font.GlyphVector;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Point2D;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,12 +21,9 @@ import me.pieking.game.net.packet.ChoseAutonPacket;
 import me.pieking.game.net.packet.PlayerUpdatePacket;
 import me.pieking.game.net.packet.SetGameTimePacket;
 import me.pieking.game.net.packet.SetStatePacket;
-import me.pieking.game.net.packet.SetTeamPacket;
 import me.pieking.game.net.packet.UpdateScorePacket;
 import me.pieking.game.net.packet.VotePacket;
 import me.pieking.game.robot.Robot;
-import me.pieking.game.robot.component.ClawGrabberComponent;
-import me.pieking.game.robot.component.Component;
 import me.pieking.game.scripting.LuaScript;
 import me.pieking.game.sound.Sound;
 import me.pieking.game.sound.SoundClip;
@@ -123,7 +122,7 @@ public class Gameplay {
 			case TELEOP:
 				if(Game.keyHandler().isPressed(KeyEvent.VK_F9)) setState(GameState.MATCH_END);
 				if(gameTime <= 0){
-//					setState(GameState.MATCH_END);
+					setState(GameState.MATCH_END);
 				}
 				
 				if(gameTime == 30 * 60) {
@@ -202,11 +201,33 @@ public class Gameplay {
 			g.setColor(Color.RED);
 			g.setFont(Fonts.pixelmix.deriveFont(40f));
 			String msg = "Waiting for Players...";
+			if(!Game.isConnected() && !Game.isServer()) {
+				msg = "Not Connected to Server";
+				g.setFont(Fonts.pixelmix.deriveFont(36f));
+			}
 			g.drawString(msg, Game.getWidth()/2 - g.getFontMetrics().stringWidth(msg)/2, Game.getHeight()/2);
+			
+			if(Game.isServer()) {
+				try {
+					g.setFont(Fonts.pixelmix.deriveFont(30f));
+					g.setColor(Color.GREEN);
+					g.drawString("Hosting On", Game.getWidth()/2 - g.getFontMetrics().stringWidth("Hosting On")/2, Game.getHeight()/2 - 150);
+					
+					g.setFont(Fonts.pixelmix.deriveFont(40f));
+					String ip = InetAddress.getLocalHost().getHostAddress() + ":" + ServerStarter.serverStarter.getServer().getUdpPort();
+					g.drawString(ip, Game.getWidth()/2 - g.getFontMetrics().stringWidth(ip)/2, Game.getHeight()/2 - 100);
+				} catch (UnknownHostException e) {
+					e.printStackTrace();
+				}
+			}
+			
+			g.setColor(Color.RED);
 			g.setFont(Fonts.pixelmix.deriveFont(32f));
-			String msg2 = "(" + Game.getWorld().getPlayers().size() + "/6)";
-			g.drawString(msg2, Game.getWidth()/2 - g.getFontMetrics().stringWidth(msg2)/2, Game.getHeight()/2 + 40);
-		
+			if(Game.isConnected() || Game.isServer()) {
+    			String msg2 = "(" + Game.getWorld().getPlayers().size() + "/6)";
+    			g.drawString(msg2, Game.getWidth()/2 - g.getFontMetrics().stringWidth(msg2)/2, Game.getHeight()/2 + 40);
+			}
+			
 			int numVoted = 0;
 			List<Player> vote = new ArrayList<Player>();
 			vote.addAll(voted);
@@ -221,10 +242,20 @@ public class Gameplay {
 			g.setFont(Fonts.pixelmix.deriveFont(16f));
 			g.setColor(new Color(170, 120, 0));
 			String msg3 = "Press " + (Game.controllerState().isConnected ? "(A)" : "[V]") + " to vote for force start.";
-			g.drawString(msg3, Game.getWidth()/2 - g.getFontMetrics().stringWidth(msg3)/2, Game.getHeight()/2 + 80);
-			String msg4 = "" + numVoted + " of " + (int)Math.ceil(Game.getWorld().getPlayers().size() / 2d) + " needed.";
-			g.drawString(msg4, Game.getWidth()/2 - g.getFontMetrics().stringWidth(msg4)/2, Game.getHeight()/2 + 100);
-		
+			if(Game.isServer() || !Game.isConnected()) {
+				msg3 = "Press " + (Game.controllerState().isConnected ? "(A)" : "[V]") + " to force start.";
+			}
+			g.drawString(msg3, Game.getWidth()/2 - g.getFontMetrics().stringWidth(msg3)/2, Game.getHeight()/2 + 80 - (Game.isConnected() || Game.isServer() ? 0 : 40));
+			
+			if(Game.isConnected() || Game.isServer()) {
+				String msg4 = "" + numVoted + " of " + (int)Math.ceil(Game.getWorld().getPlayers().size() / 2d) + " needed.";
+				g.drawString(msg4, Game.getWidth()/2 - g.getFontMetrics().stringWidth(msg4)/2, Game.getHeight()/2 + 100);
+			}
+			
+			if(!Game.isConnected() || Game.isServer()) {
+    			String msg4 = "Press [S] for settings.";
+    			g.drawString(msg4, Game.getWidth()/2 - g.getFontMetrics().stringWidth(msg4)/2, Game.getHeight()/2 + 130);
+			}
 		}else if(state == GameState.SETUP){
 			g.setColor(new Color(0f, 0f, 0f, 0.5f));
 			g.fillRect(0, 0, Game.getWidth(), Game.getHeight());
@@ -374,6 +405,21 @@ public class Gameplay {
 		
 		if(Game.gameplay.getState() == GameState.TELEOP && !Game.isServer()) {
 			Game.getWorld().getProperties(Game.getWorld().getSelfPlayer().team).getVault().render(g);
+		}else if(Game.gameplay.getState() == GameState.TELEOP && Game.isServer()) {
+			Vault rVault = Game.getWorld().getProperties(Team.RED).getVault();
+			rVault.setLockedOpen(true);
+			rVault.setScale(1f);
+			rVault.render(g);
+			
+			AffineTransform tr = g.getTransform();
+			
+			g.translate(Game.getWidth() - 140, 0);
+			Vault bVault = Game.getWorld().getProperties(Team.BLUE).getVault();
+			bVault.setLockedOpen(true);
+			bVault.setScale(1f);
+			bVault.render(g);
+			
+			g.setTransform(tr);
 		}
 		
 //		g.setFont(Fonts.pixeled.deriveFont(16f));
@@ -415,7 +461,7 @@ public class Gameplay {
 				break;
 			case SETUP:
 				resetField();
-				setGameTime(2 * 60);
+				setGameTime(5 * 60);
 				Robot.setAllEnabled(false);
 				Game.getWorld().setCameraCentered(false);
 				

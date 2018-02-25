@@ -18,6 +18,9 @@ public class Render {
 		
 		g.clearRect(0, 0, d.getWidth(), d.getHeight());
 		
+		g.setColor(Color.DARK_GRAY);
+		g.fillRect(0, 0, d.getWidth(), d.getHeight());
+		
 		g.setColor(Color.GREEN);
 		g.drawRect((int) (100 + Math.sin(Game.getTime()/10f) * 10), (int) (100 + Math.cos(Game.getTime()/10f) * 10), 20, 20);
 

@@ -5,18 +5,24 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import javax.swing.JOptionPane;
+
 import com.jmr.wrapper.common.Connection;
 import com.jmr.wrapper.common.exceptions.NNCantStartServer;
 import com.jmr.wrapper.server.Server;
 
 import me.pieking.game.Game;
 import me.pieking.game.Scheduler;
+import me.pieking.game.Settings;
+import me.pieking.game.Logger.ExitState;
 import me.pieking.game.net.packet.JoinPacket;
+import me.pieking.game.net.packet.KickPacket;
 import me.pieking.game.net.packet.LeavePacket;
 import me.pieking.game.net.packet.Packet;
 import me.pieking.game.net.packet.SetTeamPacket;
 import me.pieking.game.net.packet.ShipComponentHealthPacket;
 import me.pieking.game.net.packet.ShipDataPacket;
+import me.pieking.game.net.packet.UpdateSettingsPacket;
 import me.pieking.game.robot.component.Component;
 import me.pieking.game.world.Player;
 import me.pieking.game.world.Balance.Team;
@@ -45,6 +51,8 @@ public class ServerStarter {
 			}
 		} catch (NNCantStartServer e) {
 			e.printStackTrace();
+			JOptionPane.showMessageDialog(null, "Could not start server:\n" + e.getClass().getSimpleName() + ": " + e.getMessage());
+			Game.stop(ExitState.SERVER_RUN_ERROR.code);
 		}
 	}
 	
@@ -83,8 +91,18 @@ public class ServerStarter {
 		Packet p = (Packet) clazz.getConstructor(types).newInstance((Object[]) otherArgs);
 		
 		if(p instanceof JoinPacket){
-			p.doAction();
 			JoinPacket jp = (JoinPacket)p;
+			
+			boolean correctVersion = checkVersion(jp.getVersion());
+			
+			if(!correctVersion) {
+				KickPacket kp = new KickPacket("Incorrect version. The server requires \"" + Game.getVersion() + "\" but you have \"" + jp.getVersion() + "\".");
+				writePacket(from, kp);
+				return;
+			}
+			
+			p.doAction();
+			
 			Player pl = jp.getCreated();
 			if(pl != null) {
 				connections.put(from, pl);
@@ -92,6 +110,9 @@ public class ServerStarter {
 				pl.team = connections.size() % 2 == 0 ? Team.RED : Team.BLUE;
 				SetTeamPacket stp = new SetTeamPacket(pl.name, pl.team.toString());
 				sendToAll(stp);
+				
+				UpdateSettingsPacket usp = new UpdateSettingsPacket(Settings.save());
+				writePacket(from, usp);
 			}
 			
 //			if(Game.startGameTimer == -1 && Game.getWorld().getPlayers().size() > 1){
@@ -100,7 +121,7 @@ public class ServerStarter {
 			
 			for(Player pl2 : Game.getWorld().getPlayers()){
 				if(pl2 != pl){
-					JoinPacket jp2 = new JoinPacket(pl2.name, pl2.getLocation().getX()+"", pl2.getLocation().getY()+"");
+					JoinPacket jp2 = new JoinPacket(pl2.name, pl2.getLocation().getX()+"", pl2.getLocation().getY()+"", Game.getVersion());
 					writePacket(from, jp2);
 					
 					Scheduler.delayedTask(() -> {
@@ -154,6 +175,10 @@ public class ServerStarter {
 //		}
 		
 		sendToAllBut(from, p);
+	}
+
+	private boolean checkVersion(String version) {
+		return version.equals(Game.getVersion());
 	}
 
 	private void writePacket(Connection from, Packet p) {
