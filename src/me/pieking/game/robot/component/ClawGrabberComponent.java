@@ -205,7 +205,7 @@ public class ClawGrabberComponent extends ActivatableComponent {
 		if(!cube) {
 			if(weld != null) {
 				Game.getWorld().getWorld().removeJoint(weld);
-				System.out.println(weld);
+//				System.out.println(weld);
 			}
 			
 //			Transform tra = lastBody.getTransform().copy();
@@ -214,7 +214,7 @@ public class ClawGrabberComponent extends ActivatableComponent {
 //			dummyCube.base.applyForce(new Vector2(unitSize * Math.cos(r), unitSize * Math.sin(r)).multiply(500));
 //			Game.getWorld().addPowerCube(dummyCube);
 			if(this.cube != null) {
-				System.out.println("drop cube");
+//				System.out.println("drop cube");
 				this.cube.base.shouldRender = true;
 				this.cube.holding = false;
     			Transform tra = lastBody.getTransform().copy();

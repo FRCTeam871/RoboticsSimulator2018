@@ -498,7 +498,7 @@ public class Robot {
 			
 			String[] str = line.split(" ");
 			
-			System.out.println(state);
+//			System.out.println(state);
 			
 			switch(state){
 				case "info":

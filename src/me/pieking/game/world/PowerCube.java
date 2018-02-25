@@ -13,6 +13,7 @@ import org.dyn4j.geometry.Rectangle;
 
 import me.pieking.game.Game;
 import me.pieking.game.Location;
+import me.pieking.game.Settings;
 import me.pieking.game.Vars;
 import me.pieking.game.gfx.Sprite;
 import me.pieking.game.gfx.Spritesheet;
@@ -77,7 +78,7 @@ public class PowerCube {
 	}
 	
 	public void tick(){
-		if(Game.getTime() % 30 == 0 && Game.isServer()) {
+		if(Game.getTime() % Settings.cubeUpdateInterval == 0 && Game.isServer()) {
 			sendServerMotion();
 		}
 	}

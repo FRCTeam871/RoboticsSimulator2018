@@ -13,14 +13,19 @@ import java.awt.geom.AffineTransform;
 import java.awt.geom.Area;
 import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.Reader;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.lang.reflect.InvocationTargetException;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -29,6 +34,8 @@ import java.util.List;
 import java.util.StringTokenizer;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
+
+import org.json.JSONObject;
 
 public class Utils {
 
@@ -224,77 +231,107 @@ public class Utils {
 	     return sw.getBuffer().toString();
 	}
 	
-//	public static JSONObject getJSON(String path){
-//		String json = "";
-//		
-//		BufferedReader br = new BufferedReader(new InputStreamReader(Utils.class.getClassLoader().getResourceAsStream(path)));
-//		
-//		String line;
-//		try {
-//			while((line = br.readLine()) != null){
-//				json = json + line;
-//			}
-//		} catch (IOException e) {
-//			e.printStackTrace();
-//		}
-//		
-//		System.out.println(json);
-//		
-//		JSONObject jo = new JSONObject(json);
-//		
-//		return jo;
-//	}
-//	
-//	public static JSONObject getJSON(URL path){
-//		String json = "";
-//		
-//		BufferedReader br = null;
-//		try {
-//			br = new BufferedReader(new InputStreamReader(path.openStream()));
-//		} catch (NullPointerException e1) {
-//			Game.warn("json file not found at " + path);
-//			e1.printStackTrace();
-//		} catch (IOException e1) {
-//			e1.printStackTrace();
-//		}
-//		
-//		String line;
-//		try {
-//			while((line = br.readLine()) != null){
-//				json = json + line;
-//			}
-//		} catch (IOException e) {
-//			e.printStackTrace();
-//		}
-//		
-//		//System.out.println(json);
-//		
-//		JSONObject jo = new JSONObject(json);
-//		
-//		return jo;
-//	}
-//	
-//	public static JSONObject getJSON(InputStream stream){
-//		String json = "";
-//		
-//		BufferedReader br = null;
-//		br = new BufferedReader(new InputStreamReader(stream));
-//		
-//		String line;
-//		try {
-//			while((line = br.readLine()) != null){
-//				json = json + line;
-//			}
-//		} catch (IOException e) {
-//			e.printStackTrace();
-//		}
-//		
-//		System.out.println(json);
-//		
-//		JSONObject jo = new JSONObject(json);
-//		
-//		return jo;
-//	}
+	public static JSONObject getJSON(String path){
+		String json = "";
+		
+		BufferedReader br = new BufferedReader(new InputStreamReader(Utils.class.getClassLoader().getResourceAsStream(path)));
+		
+		String line;
+		try {
+			while((line = br.readLine()) != null){
+				json = json + line;
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		JSONObject jo = new JSONObject(json);
+		
+		return jo;
+	}
+	
+	public static JSONObject getJSON(URL path){
+		String json = "";
+		
+		BufferedReader br = null;
+		try {
+			br = new BufferedReader(new InputStreamReader(path.openStream()));
+		} catch (NullPointerException e1) {
+			Logger.warn("json file not found at " + path);
+			e1.printStackTrace();
+		} catch (IOException e1) {
+			e1.printStackTrace();
+		}
+		
+		String line;
+		try {
+			while((line = br.readLine()) != null){
+				json = json + line;
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		JSONObject jo = new JSONObject(json);
+		
+		return jo;
+	}
+	
+	public static JSONObject tbaAPICall(URL path){
+		String json = "";
+		
+		BufferedReader br = null;
+		try {
+			HttpURLConnection con = (HttpURLConnection) path.openConnection();
+	        con.setRequestMethod("GET");
+	        con.addRequestProperty("X-TBA-Auth-Key", "zxkl7V7cuY5U8nJyBU9wYbzID8LL177rFM3f05V8aSCcobi5Y2CGEnSYaDocN9ok");
+	        con.addRequestProperty("User-Agent", "TBA-API");
+	        
+			br = new BufferedReader(new InputStreamReader(con.getInputStream()));
+		} catch (NullPointerException e1) {
+			Logger.warn("json file not found at " + path);
+			e1.printStackTrace();
+		} catch (IOException e1) {
+			e1.printStackTrace();
+		}
+		
+		String line;
+		try {
+			while((line = br.readLine()) != null){
+				json = json + line;
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		JSONObject jo = new JSONObject(json);
+		
+		return jo;
+	}
+	
+	public static JSONObject getTeamInfo(int teamNum) throws MalformedURLException {
+		return tbaAPICall(new URL("https://www.thebluealliance.com/api/v3/team/frc" + teamNum + "/simple"));
+	}
+	
+	public static JSONObject getJSON(InputStream stream){
+		String json = "";
+		
+		BufferedReader br = null;
+		br = new BufferedReader(new InputStreamReader(stream));
+		
+		String line;
+		try {
+			while((line = br.readLine()) != null){
+				json = json + line;
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		JSONObject jo = new JSONObject(json);
+		
+		return jo;
+	}
 	
 	public static void drawDialogueBox(Graphics g, int x, int y, int w, int h){
 		Graphics2D g2d = (Graphics2D) g;

@@ -699,14 +699,15 @@ public class GameWorld {
     			}
     			
     			boost.setTimer(boost.getTimer() - 1);
+    			
     			if(boost.getTimer() == 0){
-    				getProperties(Team.RED).setSwitchScoreMod(2);
-    				getProperties(Team.RED).setScaleScoreMod(2);
-    				getProperties(Team.BLUE).setSwitchScoreMod(2);
-    				getProperties(Team.BLUE).setScaleScoreMod(2);
+    				getProperties(Team.RED).setSwitchScoreMod(1);
+    				getProperties(Team.RED).setScaleScoreMod(1);
+    				getProperties(Team.BLUE).setSwitchScoreMod(1);
+    				getProperties(Team.BLUE).setScaleScoreMod(1);
     				
     				boost.setUsing(Team.NONE);
-    				if(boost.getUsing() != Team.NONE){
+    				if(boost.getQueued() != Team.NONE){
     					forceBoost(boost.getQueued());
     					boost.setQueued(Team.NONE);
     				}
@@ -1282,7 +1283,8 @@ public class GameWorld {
 		exchanging.clear();
 		particles.clear();
 		
-		initializeWorld();
+		Scheduler.delayedTask(this::initializeWorld, 20);
+		
 		
 		for(Player p : players){
 			p.setLocation(new Point2D.Double(0, 0), 0);

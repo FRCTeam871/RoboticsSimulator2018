@@ -37,9 +37,6 @@ public class LuaScriptLoader {
 		server_globals.load(new JseBaseLib());
 		server_globals.load(new PackageLib());
 		server_globals.load(new StringLib());
-		hyperbolic h = new hyperbolic();
-		server_globals.load(h);
-		h.call(LuaValue.valueOf("hyperbolic"), server_globals);
 
 		// To load scripts, we occasionally need a math library in addition to compiler support.
 		// To limit scripts using the debug library, they must be closures, so we only install LuaC.

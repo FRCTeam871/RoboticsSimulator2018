@@ -1,7 +1,12 @@
 package me.pieking.game.net;
 
+import javax.swing.JOptionPane;
+
 import com.jmr.wrapper.common.Connection;
 import com.jmr.wrapper.common.listener.SocketListener;
+
+import me.pieking.game.Game;
+import me.pieking.game.Logger.ExitState;
 
 public class ClientListener implements SocketListener {
 
@@ -26,6 +31,8 @@ public class ClientListener implements SocketListener {
 	@Override
 	public void disconnected(Connection con) {
 		System.out.println("Disconnected from the server.");
+		JOptionPane.showMessageDialog(null, "You were disconnected from the server.");
+		Game.stop(ExitState.SERVER_DISCONNECT.code);
 	}
 	
 }

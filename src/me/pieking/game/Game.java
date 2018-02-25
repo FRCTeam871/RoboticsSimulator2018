@@ -3,7 +3,6 @@ package me.pieking.game;
 import java.awt.AWTException;
 import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.Image;
 import java.awt.MouseInfo;
 import java.awt.Point;
 import java.awt.Toolkit;
@@ -13,24 +12,24 @@ import java.awt.event.InputEvent;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.io.IOException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.Timer;
 
+import org.json.JSONObject;
+
 import com.studiohartman.jamepad.ControllerManager;
 import com.studiohartman.jamepad.ControllerState;
 import com.studiohartman.jamepad.ControllerUnpluggedException;
-import com.sun.java.swing.plaf.windows.resources.windows;
 
 import me.pieking.game.events.KeyHandler;
 import me.pieking.game.events.MouseHandler;
 import me.pieking.game.gfx.Disp;
 import me.pieking.game.gfx.Fonts;
-import me.pieking.game.gfx.Images;
 import me.pieking.game.gfx.Render;
 import me.pieking.game.menu.Menu;
 import me.pieking.game.net.ClientStarter;
@@ -94,7 +93,7 @@ public class Game {
 	private static boolean fullScreen;
 	private static JPanel jp;
 	
-	public static final boolean QUICK_CONNECT = true;
+	public static final boolean QUICK_CONNECT = false;
 	public static final boolean GAMEPLAY_DEBUG = true;
 	
 	public static List<Packet> packetQueue = new ArrayList<Packet>();
@@ -180,7 +179,7 @@ public class Game {
 		
 		if(isServer()) {
 			
-			boolean smallServer = true;
+			boolean smallServer = false;
 			
 			if(smallServer) {
     			HEIGHT = 400;
@@ -260,6 +259,7 @@ public class Game {
 		LuaScriptLoader.init();
 		Sound.init();
 		Fonts.init();
+		Settings.loadConfig();
 		
 		gw = new GameWorld();
 		gameplay = new Gameplay();
@@ -276,9 +276,24 @@ public class Game {
 			ClientStarter.clientStarter.getClient().connect();
 			if (ClientStarter.clientStarter.getClient().isConnected()) {
 				System.out.println("Connected to the server.");
-				JoinPacket pack = new JoinPacket("Player " + System.currentTimeMillis(), "1", "1");
+//				String username = JOptionPane.showInputDialog(frame, "Enter a username:");
+				int teamNum = Rand.range(1, 8000);
+				String username = "Team " + teamNum;
+				
+				// data can be polled from https://www.thebluealliance.com/api/v3/team/frc####?X-TBA-Auth-Key=****
+				JoinPacket pack = new JoinPacket(username, "1", "1", getVersion());
 				Game.doPacket(pack);
 				Game.getWorld().setSelfPlayer(pack.getCreated());
+				
+				try {
+					System.out.println("Polling TBA for team " + teamNum + " ...");
+					JSONObject json = Utils.getTeamInfo(teamNum);
+					System.out.println("Got response:");
+					System.out.println(json.toString(2));
+					if(!json.has("Errors")) gw.getSelfPlayer().setTeamInfo(json);
+				}catch(Exception e) {
+					e.printStackTrace();
+				}
 				
 				Robot s = gw.getSelfPlayer().selectShip();
 			    
@@ -290,7 +305,11 @@ public class Game {
 				}
 				
 			} else {
-				gw.setSelfPlayer(new Player("Player 1", 900f / GameObject.SCALE * GameWorld.FIELD_SCALE, 500f / GameObject.SCALE * GameWorld.FIELD_SCALE, Team.RED));
+				
+				int teamNum = Rand.range(1, 8000);
+				String username = "Team " + teamNum;
+				
+				gw.setSelfPlayer(new Player(username, 900f / GameObject.SCALE * GameWorld.FIELD_SCALE, 500f / GameObject.SCALE * GameWorld.FIELD_SCALE, Team.RED));
 
 				Robot s = gw.getSelfPlayer().selectShip();
 				gw.getSelfPlayer().loadShip(s);
@@ -312,10 +331,13 @@ public class Game {
 
 		List<Packet> pack = new ArrayList<Packet>();
 		pack.addAll(packetQueue);
+//		System.out.println("packets: " + packetQueue.size());
+//		long start = System.currentTimeMillis();
 		for(Packet p : pack) {
 			if(p != null) p.doAction();
 		}
 		packetQueue.clear();
+//		System.out.println("took " + (System.currentTimeMillis()-start) + "ms");
 		
 		state = controllerManager.getState(0);
 		
@@ -326,7 +348,7 @@ public class Game {
 			e.printStackTrace();
 		}
 		
-		if(!isServer()){
+//		if(!isServer()){
 			Point p = disp.getMousePositionScaled();
     		if(p != null) keyHandler.lastMousePos = p;
     		
@@ -336,7 +358,7 @@ public class Game {
     			m.iTick();
     		}
     		
-		}
+//		}
 		
 		time++;
 	}

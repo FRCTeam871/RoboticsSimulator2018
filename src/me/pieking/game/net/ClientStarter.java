@@ -43,8 +43,8 @@ public class ClientStarter {
 //			}
 //		}).start();
 		
-		String rawip = "localhost:" + ServerStarter.DEFAULT_PORT; //47.18.146.218
-		if(!Game.QUICK_CONNECT) rawip = JOptionPane.showInputDialog("Enter an IP: ", "localhost:" + ServerStarter.DEFAULT_PORT); //47.18.146.218
+		String rawip = "localhost:" + ServerStarter.DEFAULT_PORT;
+		if(!Game.QUICK_CONNECT) rawip = JOptionPane.showInputDialog("Enter an IP: ", "localhost:" + ServerStarter.DEFAULT_PORT);
 		
 		String ip = rawip.split(":")[0];
 		int port = Integer.parseInt(rawip.split(":")[1]);
@@ -76,7 +76,7 @@ public class ClientStarter {
 		String className = p.getClass().getSimpleName();
 //		System.out.println("write " + className + "|" + p.format());
 		
-		if(client.isConnected()) client.getServerConnection().sendTcp(className + "|" + p.format());
+		if(client.isConnected()) client.getServerConnection().sendUdp(className + "|" + p.format());
 	}
 	
 	public void recieve(String msg) throws ClassNotFoundException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {

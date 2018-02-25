@@ -13,16 +13,18 @@ public class JoinPacket extends Packet {
 	int y;
 	Player created = null;
 	Color col;
+	String version;
 	
-	public JoinPacket(String username, String x, String y) {
+	public JoinPacket(String username, String x, String y, String version) {
 		this.user = username;
 		this.x = Integer.parseInt(x);
 		this.y = Integer.parseInt(y);
+		this.version = version;
 	}
 
 	@Override
 	public String format() {
-		return user + "|" + x + "|" + y;
+		return user + "|" + x + "|" + y + "|" + version;
 	}
 
 	@Override
@@ -39,6 +41,10 @@ public class JoinPacket extends Packet {
 	
 	public Player getCreated(){
 		return created;
+	}
+
+	public String getVersion() {
+		return version;
 	}
 	
 }
