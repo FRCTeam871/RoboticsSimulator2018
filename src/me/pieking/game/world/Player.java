@@ -1069,7 +1069,8 @@ public class Player {
 	}
 
 	public Robot selectShip() {
-		if(Game.QUICK_CONNECT) {
+		boolean autoSelect = true;
+		if(Game.QUICK_CONNECT || autoSelect) {
 			File f = FileSystem.getFile("robots/default.rob");
 			
 			try {

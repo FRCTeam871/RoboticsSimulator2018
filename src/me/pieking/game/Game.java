@@ -93,7 +93,7 @@ public class Game {
 	private static boolean fullScreen;
 	private static JPanel jp;
 	
-	public static final boolean QUICK_CONNECT = true;
+	public static final boolean QUICK_CONNECT = false;
 	public static final boolean GAMEPLAY_DEBUG = true;
 	
 	public static List<Packet> packetQueue = new ArrayList<Packet>();
@@ -179,7 +179,7 @@ public class Game {
 		
 		if(isServer()) {
 			
-			boolean smallServer = true;
+			boolean smallServer = false;
 			
 			if(smallServer) {
     			HEIGHT = 400;

@@ -8,6 +8,8 @@ import java.awt.event.KeyEvent;
 import java.awt.font.GlyphVector;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Point2D;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,12 +21,9 @@ import me.pieking.game.net.packet.ChoseAutonPacket;
 import me.pieking.game.net.packet.PlayerUpdatePacket;
 import me.pieking.game.net.packet.SetGameTimePacket;
 import me.pieking.game.net.packet.SetStatePacket;
-import me.pieking.game.net.packet.SetTeamPacket;
 import me.pieking.game.net.packet.UpdateScorePacket;
 import me.pieking.game.net.packet.VotePacket;
 import me.pieking.game.robot.Robot;
-import me.pieking.game.robot.component.ClawGrabberComponent;
-import me.pieking.game.robot.component.Component;
 import me.pieking.game.scripting.LuaScript;
 import me.pieking.game.sound.Sound;
 import me.pieking.game.sound.SoundClip;
@@ -207,6 +206,22 @@ public class Gameplay {
 				g.setFont(Fonts.pixelmix.deriveFont(36f));
 			}
 			g.drawString(msg, Game.getWidth()/2 - g.getFontMetrics().stringWidth(msg)/2, Game.getHeight()/2);
+			
+			if(Game.isServer()) {
+				try {
+					g.setFont(Fonts.pixelmix.deriveFont(30f));
+					g.setColor(Color.GREEN);
+					g.drawString("Hosting On", Game.getWidth()/2 - g.getFontMetrics().stringWidth("Hosting On")/2, Game.getHeight()/2 - 150);
+					
+					g.setFont(Fonts.pixelmix.deriveFont(40f));
+					String ip = InetAddress.getLocalHost().getHostAddress() + ":" + ServerStarter.serverStarter.getServer().getUdpPort();
+					g.drawString(ip, Game.getWidth()/2 - g.getFontMetrics().stringWidth(ip)/2, Game.getHeight()/2 - 100);
+				} catch (UnknownHostException e) {
+					e.printStackTrace();
+				}
+			}
+			
+			g.setColor(Color.RED);
 			g.setFont(Fonts.pixelmix.deriveFont(32f));
 			if(Game.isConnected() || Game.isServer()) {
     			String msg2 = "(" + Game.getWorld().getPlayers().size() + "/6)";

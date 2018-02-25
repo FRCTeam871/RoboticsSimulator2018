@@ -43,8 +43,8 @@ public class ClientStarter {
 //			}
 //		}).start();
 		
-		String rawip = "localhost:" + ServerStarter.DEFAULT_PORT; //47.18.146.218
-		if(!Game.QUICK_CONNECT) rawip = JOptionPane.showInputDialog("Enter an IP: ", "localhost:" + ServerStarter.DEFAULT_PORT); //47.18.146.218
+		String rawip = "localhost:" + ServerStarter.DEFAULT_PORT;
+		if(!Game.QUICK_CONNECT) rawip = JOptionPane.showInputDialog("Enter an IP: ", "localhost:" + ServerStarter.DEFAULT_PORT);
 		
 		String ip = rawip.split(":")[0];
 		int port = Integer.parseInt(rawip.split(":")[1]);

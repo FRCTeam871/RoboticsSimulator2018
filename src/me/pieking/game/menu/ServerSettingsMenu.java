@@ -109,7 +109,7 @@ protected List<EToggle> toggles = new ArrayList<EToggle>();
 	public void init() {
 		buttons.clear();
 		
-		baseX = 550;
+		baseX = Game.getWidth()/2 + 50;
 		baseY = 60;
 		yInc  = 30;
 		
