@@ -2,7 +2,6 @@ package me.pieking.game.command;
 
 import java.util.List;
 
-import me.pieking.game.Game;
 import me.pieking.game.gfx.Sprite;
 import me.pieking.game.sound.Sound;
 

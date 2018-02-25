@@ -13,6 +13,7 @@ import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.dyn4j.collision.Filter;
 import org.dyn4j.dynamics.Body;
 import org.dyn4j.dynamics.BodyFixture;
 import org.dyn4j.geometry.AABB;
@@ -25,7 +26,7 @@ import me.pieking.game.robot.component.Component;
 
 public class GameObject extends Body {
 	
-	public static double DEFAULT_SCALE = 60.0;
+	public static double DEFAULT_SCALE = 50.0;
 	public static double SCALE = DEFAULT_SCALE;
 	public static double DESIRED_SCALE = DEFAULT_SCALE;
 	public static double ZOOM_SCALE = 0.0;
@@ -175,6 +176,18 @@ public class GameObject extends Body {
 			Stroke st = g.getStroke();
 			g.setStroke(str);
 			Graphics2DRenderer.render(g, convex, scale, color);
+			Vector2 cen = convex.getCenter();
+			
+			AffineTransform tr = g.getTransform();
+			g.rotate(-getTransform().getRotation());
+			
+			g.setColor(Color.BLACK);
+			Filter f = fixture.getFilter();
+			if(f instanceof GameObjectFilter) {
+				g.drawString(((GameObjectFilter) f).type.toString(), (int)cen.x, (int)cen.y);
+			}
+			g.setTransform(tr);
+			
 			g.setStroke(st);
 		}
 		
@@ -231,29 +244,24 @@ public class GameObject extends Body {
 		// loop over all the body fixtures for this body
 		List<BodyFixture> bffs = new ArrayList<>();
 		bffs.addAll(fixtures);
-		for (BodyFixture fixture : bffs) {
-			// get the shape on the fixture
-			Convex convex = fixture.getShape();
-			//System.out.println(convex.getClass());
 			
-			Stroke st = g.getStroke();
-			g.setStroke(str);
-			scale += 2;
-			
-			int w = (int)(Component.unitSize * scale * sprW);
-			int h = (int)(Component.unitSize * scale * sprH);
-			
-			g.drawImage(spr.getImage(), -(int)(Component.unitSize/2 * scale), -(int)(Component.unitSize/2 * scale), w, h, null);
-			Shape s = spr.getShape();
-			AffineTransform tra = AffineTransform.getTranslateInstance(-(int)(Component.unitSize/2 * scale), -(int)(Component.unitSize/2 * scale));
-			tra.scale(w/(double)spr.getWidth(), h/(double)spr.getHeight());
-			s = tra.createTransformedShape(s);
-			
-			g.setColor(col);
-			g.fill(s);
+		Stroke st = g.getStroke();
+		g.setStroke(str);
+		scale += 2;
+		
+		int w = (int)(Component.unitSize * scale * sprW);
+		int h = (int)(Component.unitSize * scale * sprH);
+		
+		g.drawImage(spr.getImage(), -(int)(Component.unitSize/2 * scale), -(int)(Component.unitSize/2 * scale), w, h, null);
+		Shape s = spr.getShape();
+		AffineTransform tra = AffineTransform.getTranslateInstance(-(int)(Component.unitSize/2 * scale), -(int)(Component.unitSize/2 * scale));
+		tra.scale(w/(double)spr.getWidth(), h/(double)spr.getHeight());
+		s = tra.createTransformedShape(s);
+		
+		g.setColor(col);
+		g.fill(s);
 //			Graphics2DRenderer.render(g, convex, scale, color);
-			g.setStroke(st);
-		}
+		g.setStroke(st);
 		
 		g.setComposite(c);
 		
@@ -304,20 +312,12 @@ public class GameObject extends Body {
 		}
 		
 		// loop over all the body fixtures for this body
-		for (BodyFixture fixture : this.fixtures) {
-			// get the shape on the fixture
-			Convex convex = fixture.getShape();
-			//System.out.println(convex.getClass());
-			
-			Stroke st = g.getStroke();
-			g.setStroke(str);
-			scale += 2;
-			g.drawImage(spr.getImage(), -(int)(Component.unitSize/2 * scale), -(int)(Component.unitSize/2 * scale), (int)(Component.unitSize * scale * sprW), (int)(Component.unitSize * scale * sprH), null);
+		Stroke st = g.getStroke();
+		g.setStroke(str);
+		scale += 2;
+		g.drawImage(spr.getImage(), -(int)(Component.unitSize/2 * scale), -(int)(Component.unitSize/2 * scale), (int)(Component.unitSize * scale * sprW), (int)(Component.unitSize * scale * sprH), null);
 //			Graphics2DRenderer.render(g, convex, scale, color);
-			g.setStroke(st);
-			
-			break; //HACK: only render the first one
-		}
+		g.setStroke(st);
 		
 		g.setComposite(c);
 		

@@ -6,8 +6,6 @@ import java.awt.Point;
 import org.dyn4j.dynamics.BodyFixture;
 import org.dyn4j.geometry.Mass;
 import org.dyn4j.geometry.MassType;
-import org.dyn4j.geometry.Polygon;
-import org.dyn4j.geometry.Vector2;
 
 import me.pieking.game.gfx.AnimatedImage;
 import me.pieking.game.gfx.Sprite;

@@ -4,24 +4,30 @@ import java.awt.Point;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.dyn4j.dynamics.Force;
+import org.dyn4j.dynamics.Torque;
+import org.dyn4j.geometry.Vector2;
 import org.luaj.vm2.LuaTable;
 import org.luaj.vm2.LuaValue;
+import org.luaj.vm2.Varargs;
 import org.luaj.vm2.lib.OneArgFunction;
 import org.luaj.vm2.lib.TwoArgFunction;
+import org.luaj.vm2.lib.VarArgFunction;
 import org.luaj.vm2.lib.ZeroArgFunction;
 
 import me.pieking.game.Game;
-import me.pieking.game.Rand;
 import me.pieking.game.robot.Robot;
 import me.pieking.game.robot.component.ActivatableComponent;
 import me.pieking.game.robot.component.Component;
 import me.pieking.game.robot.component.ComputerComponent;
+import me.pieking.game.world.TeamProperties;
+import me.pieking.game.world.Balance.Team;
 
 public class LuaLibShip extends TwoArgFunction {
 
 	public LuaLibShip() {}
 
-	public static Robot getShip(){
+	public static Robot getRobot(){
 		return Game.getWorld().getSelfPlayer().robot;
 	}
 	
@@ -30,8 +36,9 @@ public class LuaLibShip extends TwoArgFunction {
 		library.set("getComponent", new getComponent());
 		library.set("getComponents", new getComponents());
 		library.set("getOrientation", new getOrientation());
+		library.set("mechDrive", new mechDrive());
 		
-		env.set("ship", library);
+		env.set("robot", library);
 		return library;
 	}
 	
@@ -105,34 +112,64 @@ public class LuaLibShip extends TwoArgFunction {
 	
 	static class getOrientation extends ZeroArgFunction {
 		public LuaValue call() {
-			double actual = Math.toDegrees(Game.getWorld().getSelfPlayer().base.getTransform().getRotation());
-			double uncertainty = 1;
-			
-			int numRadars = 0;
-			if(numRadars > 4) {
-				uncertainty = 0;
-			}else{
-				for(int i = 0; i < numRadars; i++){
-					uncertainty /= 2;
-				}
-			}
-			
-			double rot = actual + (Math.sin(Game.getTime() / 10) * uncertainty) + Rand.range((float)-uncertainty/2f, (float)uncertainty/2f);
-			
-			return valueOf(rot);
+			double actual = Math.toDegrees(Game.getWorld().getSelfPlayer().getRotation());
+			return valueOf(actual);
 		}
 	}
 	
 	static class getComponent extends TwoArgFunction {
 		public LuaValue call(LuaValue x, LuaValue y) {
-			return makeComponent(getShip().getComponent(new Point(x.checkint(), y.checkint())));
+			return makeComponent(getRobot().getComponent(new Point(x.checkint(), y.checkint())));
+		}
+	}
+	
+	static class turnRobot extends OneArgFunction {
+		@Override
+		public LuaValue call(LuaValue rot) {
+			double val = rot.checkdouble();
+			val = Math.min(Math.max(-1, val), 1d);
+			Game.getWorld().getPlayer(getRobot()).queueTorque(new Torque(200 * val));
+			return LuaValue.NIL;
+		}
+	}
+	
+	static class mechDrive extends VarArgFunction {
+		@Override
+		public LuaValue invoke(Varargs args) {
+			LuaValue x = args.arg(1);
+			LuaValue y = args.arg(2);
+			LuaValue rot = args.arg(3);
+			LuaValue gyro = args.arg(4);
+			
+			double theta = gyro.checkdouble();
+			
+			theta += Math.toDegrees(Game.getWorld().getPlayer(getRobot()).getRotation());
+			
+			double xa = Math.max(-1, Math.min(x.checkdouble(), 1));
+			xa *= 300;
+			double xcx = xa * Math.sin(Math.toRadians(theta));
+			double xcy = -xa * Math.cos(Math.toRadians(theta));
+			
+			double ya = Math.max(-1, Math.min(y.checkdouble(), 1));
+			ya *= 300;
+			double ycx = ya * Math.sin(Math.toRadians(90 - theta));
+			double ycy = ya * Math.cos(Math.toRadians(90 - theta));
+			
+			Vector2 vec = new Vector2(xcx + ycx, xcy + ycy);
+			
+			Game.getWorld().getPlayer(getRobot()).queueForce(new Force(vec));
+			
+			double rotation = rot.checkdouble();
+			rotation = Math.min(Math.max(-1, rotation), 1d);
+			Game.getWorld().getPlayer(getRobot()).queueTorque(new Torque(400 * rotation));
+			return LuaValue.NIL;
 		}
 	}
 	
 	static class getComponents extends OneArgFunction {
 		public LuaValue call(LuaValue x) {
 			
-			List<Component> comp = getShip().getComponents();
+			List<Component> comp = getRobot().getComponents();
 			List<Component> matched = new ArrayList<Component>();
 			
 			if(x.istable()){
@@ -162,6 +199,9 @@ public class LuaLibShip extends TwoArgFunction {
 			
 			for(int i = 0; i < vals.length; i++){
 				vals[i] = makeComponent(matched.get(i));
+				for(LuaValue v : vals[i].checktable().keys()) {
+					System.out.println(v.toString() + " : " + vals[i].checktable().get(v));
+				}
 			}
 			
 			return listOf(vals);

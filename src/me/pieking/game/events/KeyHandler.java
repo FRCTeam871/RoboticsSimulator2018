@@ -15,11 +15,15 @@ import java.util.List;
 
 import me.pieking.game.Game;
 import me.pieking.game.Vars;
+import me.pieking.game.Gameplay.GameState;
 import me.pieking.game.command.Command;
+import me.pieking.game.gfx.Render;
+import me.pieking.game.menu.ServerSettingsMenu;
 import me.pieking.game.robot.Robot;
+import me.pieking.game.scripting.LuaScriptLoader;
+import me.pieking.game.world.Balance.Team;
 import me.pieking.game.world.GameWorld;
 import me.pieking.game.world.Player;
-import me.pieking.game.world.Balance.Team;
 
 public class KeyHandler implements KeyListener{
 
@@ -48,11 +52,30 @@ public class KeyHandler implements KeyListener{
 //			inCommandThing = false;
 //		}
 		
-		if(e.getKeyCode() == KeyEvent.VK_NUMPAD5){
-			GameWorld.setRobotAligned(!GameWorld.isRobotAligned());
+		if(e.getKeyCode() == KeyEvent.VK_F4){
+			Game.toggleFullScreen();
+		}
+		
+		if(e.getKeyCode() == KeyEvent.VK_NUMPAD4){
+			Vars.showCollision = !Vars.showCollision;
+		}
+		
+		if(e.getKeyCode() == KeyEvent.VK_NUMPAD1){
+			Game.getWorld().useBoost(e.isControlDown() ? Team.RED : Team.BLUE);
+		}else if(e.getKeyCode() == KeyEvent.VK_NUMPAD2){
+			Game.getWorld().useForce(e.isControlDown() ? Team.RED : Team.BLUE);
+		}else if(e.getKeyCode() == KeyEvent.VK_NUMPAD3){
+			Game.getWorld().useLevitate(e.isControlDown() ? Team.RED : Team.BLUE);
+		}else if(e.getKeyCode() == KeyEvent.VK_NUMPAD0) {
+			Game.getWorld().resetPowerups();
 		}
 		
 		if(Game.getWorld().getSelfPlayer() != null){
+			
+			if(e.getKeyCode() == KeyEvent.VK_NUMPAD5){
+				GameWorld.setRobotAligned(!GameWorld.isRobotAligned());
+			}
+			
 			Player p = Game.getWorld().getSelfPlayer();
 			if(p.hasFocus()){
         		if(e.getKeyCode() == KeyEvent.VK_B){
@@ -73,25 +96,35 @@ public class KeyHandler implements KeyListener{
     					p.deleteSelected();
     				}
 				}
-				
-				if(e.getKeyCode() == KeyEvent.VK_F4){
-					p.die();
-				}
 			}
 			
 			if(e.getKeyCode() == KeyEvent.VK_NUMPAD6){
 				p.noClip = !p.noClip;
-			}else if(e.getKeyCode() == KeyEvent.VK_NUMPAD1){
-//				Game.getWorld().resetPowerups();
-				Game.getWorld().useBoost(e.isControlDown() ? Team.RED : Team.BLUE);
-			}else if(e.getKeyCode() == KeyEvent.VK_NUMPAD2){
-				Game.getWorld().useForce(e.isControlDown() ? Team.RED : Team.BLUE);
-			}else if(e.getKeyCode() == KeyEvent.VK_NUMPAD3){
-				Game.getWorld().useLevitate(e.isControlDown() ? Team.RED : Team.BLUE);
-			}else if(e.getKeyCode() == KeyEvent.VK_NUMPAD4){
-				Vars.showCollision = !Vars.showCollision;
 			}
 			
+			if(e.getKeyCode() == KeyEvent.VK_F8) {
+				Game.getWorld().getSelfPlayer().getRobot().setAutonScript(LuaScriptLoader.runScript("awesomeAuton"));
+				Game.getWorld().getSelfPlayer().getRobot().getAutonScript().run();
+			}else if(e.getKeyCode() == KeyEvent.VK_F11){
+				Game.getWorld().getSelfPlayer().constructShip();
+			}
+			
+			if(e.getKeyCode() == KeyEvent.VK_V && Game.gameplay.getState() == GameState.WAITING_FOR_PLAYERS){
+				
+				Game.gameplay.voteToStart(Game.getWorld().getSelfPlayer());
+			}
+		}
+		
+		if(Game.isServer()) {
+			if(e.getKeyCode() == KeyEvent.VK_V && Game.gameplay.getState() == GameState.WAITING_FOR_PLAYERS){
+				Game.gameplay.setState(GameState.SETUP);
+			}else if(e.getKeyCode() == KeyEvent.VK_S && Game.gameplay.getState() == GameState.WAITING_FOR_PLAYERS) {
+				Render.showMenu(new ServerSettingsMenu());
+			}
+		}else {
+			if(e.getKeyCode() == KeyEvent.VK_R) {
+				Game.getWorld().getSelfPlayer().reconstruct();
+			}
 		}
 		
 		if(Game.getWorld().getSelfPlayer() != null) Game.getWorld().getSelfPlayer().robot.keyPressed(e);

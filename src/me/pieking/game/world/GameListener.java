@@ -6,14 +6,6 @@ import org.dyn4j.dynamics.Body;
 import org.dyn4j.dynamics.BodyFixture;
 import org.dyn4j.dynamics.CollisionListener;
 import org.dyn4j.dynamics.contact.ContactConstraint;
-import org.dyn4j.dynamics.joint.Joint;
-import org.dyn4j.geometry.Vector2;
-
-import me.pieking.game.Game;
-import me.pieking.game.net.packet.ShipComponentHealthPacket;
-import me.pieking.game.robot.component.Component;
-import me.pieking.game.world.GameObject.BodyType;
-import me.pieking.game.world.GameObjectFilter.FilterType;
 
 public class GameListener implements CollisionListener{
 

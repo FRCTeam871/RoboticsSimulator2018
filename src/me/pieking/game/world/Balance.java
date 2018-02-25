@@ -22,9 +22,9 @@ public class Balance {
 	
 	public GameObject walls;
 	
-	public Balance(double x, double y, boolean blueTop, LEDStrip ledStripTop, LEDStrip ledStripBottom) {
-		red = new ScalePlatform(x-.19, y - 3.5 - .25, 7, 5.5, ledStripTop);
-		blue = new ScalePlatform(x-.19, y + 3.5, 7, 5.5, ledStripBottom);
+	public Balance(double x, double y, boolean blueTop, LEDStrip ledStripTop, LEDStrip ledStripBottom, boolean scale) {
+		red = new ScalePlatform(x-.19, y - 3.5 - .25, 7, 5.5, ledStripTop, scale);
+		blue = new ScalePlatform(x-.19, y + 3.5, 7, 5.5, ledStripBottom, scale);
 		
 		if(blueTop){
 			ScalePlatform temp = red;
@@ -78,16 +78,42 @@ public class Balance {
 			blue.strip.setMode(StripMode.PULSE_BLUE);
 		}
 		
-		if(Game.getWorld().power_boost == Team.RED){
-			red.strip.setMode(StripMode.CHASE_RED);
-		}else if(Game.getWorld().power_boost == Team.BLUE){
-			blue.strip.setMode(StripMode.CHASE_BLUE);
+		if(Game.getWorld().getBoost().getUsing() != Team.NONE) {
+    		int boostLevel = Game.getWorld().getBoost().getLevel();
+//    		System.out.println(boostLevel);
+    		boolean boostL = false;
+    		if(this instanceof Scale) {
+    			if(boostLevel >= 2) boostL = true;
+    		}else if(this == Game.getWorld().getProperties(Game.getWorld().getBoost().getUsing()).getSwitch()) {
+    			if(boostLevel % 2 == 1) boostL = true;
+    		}
+    		
+    		if(boostL) {
+        		if(Game.getWorld().getBoost().getUsing() == Team.RED){
+        			red.strip.setMode(StripMode.CHASE_RED);
+        		}else if(Game.getWorld().getBoost().getUsing() == Team.BLUE){
+        			blue.strip.setMode(StripMode.CHASE_BLUE);
+        		}
+    		}
 		}
 		
-		if(Game.getWorld().power_force == Team.RED){
-			red.strip.setMode(StripMode.PULSE_RED_BLUE_CORNERS);
-		}else if(Game.getWorld().power_force == Team.BLUE){
-			blue.strip.setMode(StripMode.PULSE_BLUE_RED_CORNERS);
+		if(Game.getWorld().getForce().getUsing() != Team.NONE) {
+    		int forceLevel = Game.getWorld().getForce().getLevel();
+//    		System.out.println(forceLevel);
+    		boolean forceL = false;
+    		if(this instanceof Scale) {
+    			if(forceLevel >= 2) forceL = true;
+    		}else if(this == Game.getWorld().getProperties(Game.getWorld().getForce().getUsing()).getSwitch()) {
+    			if(forceLevel % 2 == 1) forceL = true;
+    		}
+    		
+    		if(forceL) {
+        		if(Game.getWorld().getForce().getUsing() == Team.RED){
+        			red.strip.setMode(StripMode.PULSE_RED_BLUE_CORNERS);
+        		}else if(Game.getWorld().getForce().getUsing() == Team.BLUE){
+        			blue.strip.setMode(StripMode.PULSE_BLUE_RED_CORNERS);
+        		}
+    		}
 		}
 		
 		red.base.color = Utils.fade(Color.GRAY, Team.RED.color, 0.2f);
@@ -113,15 +139,21 @@ public class Balance {
 		ownership_override = team;
 	}
 	
+	public Team getTopTeam() {
+		return blue.y > red.y ? Team.RED : Team.BLUE;
+	}
+	
 	public static enum Team {
 		NONE (Color.GRAY),
 		BLUE (Color.decode("#0066b3")),
 		RED  (Color.decode("#ed1c24"));
 		
-		Color color;
+		public final Color color;
+		
 		private Team(Color col) {
 			color = col;
 		}
+		
 		public Team getOpposite() {
 			return this == BLUE ? RED : (this == RED ? BLUE : NONE);
 		}

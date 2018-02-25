@@ -1,12 +1,11 @@
 package me.pieking.game.world;
 
-import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Graphics2D;
-import java.awt.Shape;
-import java.awt.font.GlyphVector;
 import java.awt.geom.AffineTransform;
+import java.awt.geom.Point2D;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
@@ -18,13 +17,19 @@ import org.dyn4j.geometry.Triangle;
 import org.dyn4j.geometry.Vector2;
 
 import me.pieking.game.Game;
+import me.pieking.game.Gameplay.GameState;
 import me.pieking.game.Rand;
 import me.pieking.game.Scheduler;
 import me.pieking.game.Vars;
-import me.pieking.game.gfx.Fonts;
+import me.pieking.game.Vault;
 import me.pieking.game.gfx.Images;
 import me.pieking.game.gfx.LEDStrip;
 import me.pieking.game.gfx.Sprite;
+import me.pieking.game.net.ServerStarter;
+import me.pieking.game.net.packet.AddCubePacket;
+import me.pieking.game.net.packet.SwitchOrientationPacket;
+import me.pieking.game.net.packet.UpdateCubeStoragePacket;
+import me.pieking.game.net.packet.UpdateScorePacket;
 import me.pieking.game.robot.Robot;
 import me.pieking.game.robot.component.Component;
 import me.pieking.game.world.Balance.Team;
@@ -55,34 +60,37 @@ public class GameWorld {
 	private List<PowerCube> exchanging = new ArrayList<PowerCube>();
 	private List<ScalePlatform> scalePlatforms = new ArrayList<ScalePlatform>();
 	private List<Balance> scales = new ArrayList<Balance>();
+	
+	private GameObject autoLineColl;
+	
+	private GameObject redBarColl;
+	private GameObject redPlatformColl;
+	private GameObject redPowerCubeZoneColl;
+	private List<PowerCube> redPowerCubeZonePowerCubes = new ArrayList<PowerCube>();
+	
+	private GameObject blueBarColl;
+	private GameObject bluePlatformColl;
+	private GameObject bluePowerCubeZoneColl;
+	private List<PowerCube> bluePowerCubeZonePowerCubes = new ArrayList<PowerCube>();
+
 	private Scale scale;
 	
 	private double fieldXofs = 28.1;
 	private double fieldYofs = 11;
 
-	private int gameTime = ((2 * 60) + 30) * 60;
-	
 	private HashMap<Team, TeamProperties> teamProperties = new HashMap<Balance.Team, TeamProperties>();
 	
 	private static Vector2 mouseWorldPos = new Vector2();
 	
 	//TODO: move power up properties to their own class
 	
-	public Team power_boost = Team.NONE;
-	public Team power_boost_queued = Team.NONE;
-	public List<Team> power_boost_used = new ArrayList<>();
-	public int power_boost_timer = 0;
-	public int power_boost_level = 0;
-	public int power_boost_level_red = 0;
-	public int power_boost_level_blue = 0;
+	private PowerUp boost = new PowerUp();
+	private PowerUp force = new PowerUp();
+	private PowerUp levitate = new PowerUp();
 	
-	public Team power_force = Team.NONE;
-	public Team power_force_queued = Team.NONE;
-	public List<Team> power_force_used = new ArrayList<>();
-	public int power_force_timer = 0;
-	public int power_force_level = 0;
-	public int power_force_level_red = 0;
-	public int power_force_level_blue = 0;
+	private boolean cameraCentered = false;
+	
+	private WorldUpdateThread worldThread;
 	
 	public GameWorld(){
 		initializeWorld();
@@ -102,15 +110,27 @@ public class GameWorld {
 	 * </ul></p>
 	 */
 	public void initializeWorld() {
-		this.world = new World();
+		if(this.world == null) {
+			this.world = new World();
+			
+			if(worldThread != null) {
+				worldThread.kill();
+			}
+			
+			worldThread = new WorldUpdateThread(this.world);
+			worldThread.start();
+			
+		}
 		getWorld().setGravity(new Vector2(0, 0));
+		
+		double scale = 50;
 		
 		// top
 		GameObject floor = new GameObject();
 		floor.color = new Color(0f, 0.5f, 0f, 1f);
-		double w = (getFieldImage().getWidth() * GameObject.SCALE * 0.05) / GameObject.SCALE * FIELD_SCALE;
-		double h = (getFieldImage().getHeight() * GameObject.SCALE * 0.05) / GameObject.SCALE * FIELD_SCALE;
-		Rectangle floorRect = new Rectangle(w, 40 / GameObject.SCALE * FIELD_SCALE);
+		double w = (getFieldImage().getWidth() * scale * 0.05) / scale * FIELD_SCALE;
+		double h = (getFieldImage().getHeight() * scale * 0.05) / scale * FIELD_SCALE;
+		Rectangle floorRect = new Rectangle(w, 40 / scale * FIELD_SCALE);
 		floorRect.translate(w/2, Component.unitSize * 2 * FIELD_SCALE);
 		BodyFixture f1 = new BodyFixture(floorRect);
 		f1.setDensity(0.5f);
@@ -121,7 +141,7 @@ public class GameWorld {
 		// bottom
 		GameObject floor2 = new GameObject();
 		floor2.color = new Color(0f, 0.5f, 0f, 1f);
-		Rectangle floor2Rect = new Rectangle(w, 40 / GameObject.SCALE * FIELD_SCALE);
+		Rectangle floor2Rect = new Rectangle(w, 40 / scale * FIELD_SCALE);
 		floor2Rect.translate(w/2, h - Component.unitSize * 2 * FIELD_SCALE);
 		BodyFixture f2 = new BodyFixture(floor2Rect);
 		f2.setDensity(0.5f);
@@ -131,10 +151,11 @@ public class GameWorld {
 		
 		double holePos = 0.5;
 		
+//		System.out.println("scale = " + scale);
 		// left top
 		GameObject floor3 = new GameObject();
 		floor3.color = new Color(0f, 0.5f, 0f, 1f);
-		Rectangle floor3Rect = new Rectangle(40 / GameObject.SCALE * FIELD_SCALE, h * holePos);
+		Rectangle floor3Rect = new Rectangle(40 / scale * FIELD_SCALE, h * holePos);
 		floor3Rect.translate(Component.unitSize * 16 * FIELD_SCALE, (h * 0.3)/2);
 		BodyFixture f3 = new BodyFixture(floor3Rect);
 		f3.setDensity(0.5f);
@@ -144,7 +165,7 @@ public class GameWorld {
 		// left bottom
 		GameObject floor3B = new GameObject();
 		floor3B.color = new Color(0f, 0.5f, 0f, 1f);
-		Rectangle floor3BRect = new Rectangle(40 / GameObject.SCALE * FIELD_SCALE, h * holePos);
+		Rectangle floor3BRect = new Rectangle(40 / scale * FIELD_SCALE, h * holePos);
 		floor3BRect.translate(Component.unitSize * 16 * FIELD_SCALE, (h * 0.3)/2 +  h * holePos + (PowerCube.SIZE * 1.2));
 		BodyFixture f3b = new BodyFixture(floor3BRect);
 		f3b.setDensity(0.5f);
@@ -169,7 +190,7 @@ public class GameWorld {
 		// right top
 		GameObject floor4 = new GameObject();
 		floor4.color = new Color(0f, 0.5f, 0f, 1f);
-		Rectangle floor4Rect = new Rectangle(40 / GameObject.SCALE * FIELD_SCALE, h * holePos2);
+		Rectangle floor4Rect = new Rectangle(40 / scale * FIELD_SCALE, h * holePos2);
 		floor4Rect.translate(w - Component.unitSize * 16.5 * FIELD_SCALE, (h * 0.3)/2);
 		BodyFixture f4 = new BodyFixture(floor4Rect);
 		f4.setDensity(0.5f);
@@ -179,7 +200,7 @@ public class GameWorld {
 		// right bottom
 		GameObject floor4B = new GameObject();
 		floor4B.color = new Color(0f, 0.5f, 0f, 1f);
-		Rectangle floor4BRect = new Rectangle(40 / GameObject.SCALE * FIELD_SCALE, h * holePos2);
+		Rectangle floor4BRect = new Rectangle(40 / scale * FIELD_SCALE, h * holePos2);
 		floor4BRect.translate(w - Component.unitSize * 16.5 * FIELD_SCALE, (h * 0.3)/2 +  h * holePos2 + (PowerCube.SIZE * 1.2));
 		BodyFixture f4b = new BodyFixture(floor4BRect);
 		f4b.setDensity(0.5f);
@@ -207,7 +228,7 @@ public class GameWorld {
 		
 		GameObject slopeUL = new GameObject();
 		Triangle t1 = new Triangle(new Vector2(-1 * FIELD_SCALE, -1 * FIELD_SCALE), new Vector2(3 * FIELD_SCALE, -1 * FIELD_SCALE), new Vector2(-1 * FIELD_SCALE, 2 * FIELD_SCALE));
-		t1.translate(Component.unitSize * 16 * FIELD_SCALE + (40 / GameObject.SCALE * FIELD_SCALE), 40 / GameObject.SCALE * FIELD_SCALE + (Component.unitSize * 2 * FIELD_SCALE));
+		t1.translate(Component.unitSize * 16 * FIELD_SCALE + (40 / scale * FIELD_SCALE), 40 / scale * FIELD_SCALE + (Component.unitSize * 2 * FIELD_SCALE));
 		BodyFixture tbf1 = new BodyFixture(t1);
 		slopeUL.addFixture(tbf1);
 		getWorld().addBody(slopeUL);
@@ -215,7 +236,7 @@ public class GameWorld {
 		
 		GameObject slopeBL = new GameObject();
 		Triangle t2 = new Triangle(new Vector2(-1 * FIELD_SCALE, -1 * FIELD_SCALE), new Vector2(-1 * FIELD_SCALE, -4 * FIELD_SCALE), new Vector2(3 * FIELD_SCALE, -1 * FIELD_SCALE));
-		t2.translate((Component.unitSize * 16 * FIELD_SCALE + (40 / GameObject.SCALE * FIELD_SCALE)), h - (40 / GameObject.SCALE * FIELD_SCALE + (Component.unitSize * 2 * FIELD_SCALE)) + (2 * FIELD_SCALE));
+		t2.translate((Component.unitSize * 16 * FIELD_SCALE + (40 / scale * FIELD_SCALE)), h - (40 / scale * FIELD_SCALE + (Component.unitSize * 2 * FIELD_SCALE)) + (2 * FIELD_SCALE));
 		BodyFixture tbf2 = new BodyFixture(t2);
 		slopeBL.addFixture(tbf2);
 		getWorld().addBody(slopeBL);
@@ -223,7 +244,7 @@ public class GameWorld {
 		
 		GameObject slopeUR = new GameObject();
 		Triangle t3 = new Triangle(new Vector2(-1 * FIELD_SCALE, -1 * FIELD_SCALE), new Vector2(3 * FIELD_SCALE, -1 * FIELD_SCALE), new Vector2(3 * FIELD_SCALE, 2 * FIELD_SCALE));
-		t3.translate(Component.unitSize * 16 * FIELD_SCALE + (40 / GameObject.SCALE * FIELD_SCALE), 40 / GameObject.SCALE * FIELD_SCALE + (Component.unitSize * 2 * FIELD_SCALE));
+		t3.translate(Component.unitSize * 16 * FIELD_SCALE + (40 / scale * FIELD_SCALE), 40 / scale * FIELD_SCALE + (Component.unitSize * 2 * FIELD_SCALE));
 		t3.translate(w * 0.669, 0);
 		BodyFixture tbf3 = new BodyFixture(t3);
 		slopeUR.addFixture(tbf3);
@@ -232,54 +253,110 @@ public class GameWorld {
 		
 		GameObject slopeBR = new GameObject();
 		Triangle t4 = new Triangle(new Vector2(-1 * FIELD_SCALE, -1 * FIELD_SCALE), new Vector2(3 * FIELD_SCALE, -4 * FIELD_SCALE), new Vector2(3 * FIELD_SCALE, -1 * FIELD_SCALE));
-		t4.translate((Component.unitSize * 16 * FIELD_SCALE + (40 / GameObject.SCALE * FIELD_SCALE)), h - (40 / GameObject.SCALE * FIELD_SCALE + (Component.unitSize * 2 * FIELD_SCALE)) + (2 * FIELD_SCALE));
+		t4.translate((Component.unitSize * 16 * FIELD_SCALE + (40 / scale * FIELD_SCALE)), h - (40 / scale * FIELD_SCALE + (Component.unitSize * 2 * FIELD_SCALE)) + (2 * FIELD_SCALE));
 		t4.translate(w * 0.669, 0);
 		BodyFixture tbf4 = new BodyFixture(t4);
 		slopeBR.addFixture(tbf4);
 		getWorld().addBody(slopeBR);
 		walls.add(slopeBR);
+		
+		
+		autoLineColl = new GameObject();
+		Rectangle aRect = new Rectangle(29.15, 50);
+		aRect.translate(32.38, 0);
+		BodyFixture aBf = new BodyFixture(aRect);
+		aBf.setSensor(true);
+		autoLineColl.addFixture(aBf);
+		getWorld().addBody(autoLineColl);
+		
+		redPlatformColl = new GameObject();
+		Rectangle rpRect = new Rectangle(5, 9.4);
+		rpRect.translate(30.40, 13.15);
+		BodyFixture rpBf = new BodyFixture(rpRect);
+		rpBf.setSensor(true);
+		redPlatformColl.addFixture(rpBf);
+		getWorld().addBody(redPlatformColl);
+		
+		redBarColl = new GameObject();
+		Rectangle rbRect = new Rectangle(.5, .5);
+		rbRect.translate(31, 13.15);
+		BodyFixture rbBf = new BodyFixture(rbRect);
+		rbBf.setSensor(true);
+		redBarColl.addFixture(rbBf);
+		getWorld().addBody(redBarColl);
+		
+		redPowerCubeZoneColl = new GameObject();
+		Rectangle rpczRect = new Rectangle(3, 3);
+		rpczRect.translate(17.8, 13.15);
+		BodyFixture rpczBf = new BodyFixture(rpczRect);
+		rpczBf.setSensor(true);
+		redPowerCubeZoneColl.addFixture(rpczBf);
+		getWorld().addBody(redPowerCubeZoneColl);
+		
+		bluePlatformColl = new GameObject();
+		Rectangle bpRect = new Rectangle(5, 9.4);
+		bpRect.translate(34.45, 13.15);
+		BodyFixture bpBf = new BodyFixture(bpRect);
+		bpBf.setSensor(true);
+		bluePlatformColl.addFixture(bpBf);
+		getWorld().addBody(bluePlatformColl);
+		
+		blueBarColl = new GameObject();
+		Rectangle bbRect = new Rectangle(1.5, 1.3);
+		bbRect.translate(33, 13.15);
+		BodyFixture bbBf = new BodyFixture(bbRect);
+		bbBf.setSensor(true);
+		blueBarColl.addFixture(bbBf);
+		getWorld().addBody(blueBarColl);
+		
+		bluePowerCubeZoneColl = new GameObject();
+		Rectangle bpczRect = new Rectangle(3, 3);
+		bpczRect.translate(46.9, 13.15);
+		BodyFixture bpczBf = new BodyFixture(bpczRect);
+		bpczBf.setSensor(true);
+		bluePowerCubeZoneColl.addFixture(bpczBf);
+		getWorld().addBody(bluePowerCubeZoneColl);
 
 		// place power cubes on the field
 		
-		for(int i = 0; i < 6; i++){
-			addPowerCube(new PowerCube(-6.8 + fieldXofs, ((i-2) * 1.825) + fieldYofs - 0.15, 0));
-			addPowerCube(new PowerCube(9.0 + fieldXofs, ((i-2) * 1.825) + fieldYofs - 0.15, 0));
+		if(Game.isServer() || !Game.isConnected()) {
+    		for(int i = 0; i < 6; i++){
+    			addPowerCube(new PowerCube(-6.8 + fieldXofs, ((i-2) * 1.825) + fieldYofs - 0.15, 0));
+    			addPowerCube(new PowerCube(9.0 + fieldXofs, ((i-2) * 1.825) + fieldYofs - 0.15, 0));
+    		}
+    		
+    		addPowerCubeIntoZone(Team.RED, new PowerCube(-13 + fieldXofs, 0.79 + fieldYofs, 0));
+    		addPowerCubeIntoZone(Team.RED, new PowerCube(-13 + PowerCube.SIZE + fieldXofs, 0.79 - PowerCube.SIZE/2 + fieldYofs, 0));
+    		addPowerCubeIntoZone(Team.RED, new PowerCube(-13 + PowerCube.SIZE + fieldXofs, 0.79 + PowerCube.SIZE/2 + fieldYofs, 0));
+    		addPowerCubeIntoZone(Team.RED, new PowerCube(-13 + PowerCube.SIZE + PowerCube.SIZE + fieldXofs, 0.79 + PowerCube.SIZE/2 + PowerCube.SIZE/2 + fieldYofs, 0));
+    		addPowerCubeIntoZone(Team.RED, new PowerCube(-13 + PowerCube.SIZE + PowerCube.SIZE + fieldXofs, 0.79 + PowerCube.SIZE/2 - PowerCube.SIZE/2 + fieldYofs, 0));
+    		addPowerCubeIntoZone(Team.RED, new PowerCube(-13 + PowerCube.SIZE + PowerCube.SIZE + fieldXofs, 0.79 - PowerCube.SIZE/2 - PowerCube.SIZE/2 + fieldYofs, 0));
+    		
+    		addPowerCubeIntoZone(Team.BLUE, new PowerCube(15.3 + fieldXofs, 0.79 + fieldYofs, 0));
+    		addPowerCubeIntoZone(Team.BLUE, new PowerCube(15.3 - PowerCube.SIZE + fieldXofs, 0.79 - PowerCube.SIZE/2 + fieldYofs, 0));
+    		addPowerCubeIntoZone(Team.BLUE, new PowerCube(15.3 - PowerCube.SIZE + fieldXofs, 0.79 + PowerCube.SIZE/2 + fieldYofs, 0));
+    		addPowerCubeIntoZone(Team.BLUE, new PowerCube(15.3 - PowerCube.SIZE - PowerCube.SIZE + fieldXofs, 0.79 + PowerCube.SIZE/2 + PowerCube.SIZE/2 + fieldYofs, 0));
+    		addPowerCubeIntoZone(Team.BLUE, new PowerCube(15.3 - PowerCube.SIZE - PowerCube.SIZE + fieldXofs, 0.79 + PowerCube.SIZE/2 - PowerCube.SIZE/2 + fieldYofs, 0));
+    		addPowerCubeIntoZone(Team.BLUE, new PowerCube(15.3 - PowerCube.SIZE - PowerCube.SIZE + fieldXofs, 0.79 - PowerCube.SIZE/2 - PowerCube.SIZE/2 + fieldYofs, 0));
 		}
 		
-		addPowerCube(new PowerCube(-13 + fieldXofs, 0.79 + fieldYofs, 0));
-		addPowerCube(new PowerCube(-13 + PowerCube.SIZE + fieldXofs, 0.79 - PowerCube.SIZE/2 + fieldYofs, 0));
-		addPowerCube(new PowerCube(-13 + PowerCube.SIZE + fieldXofs, 0.79 + PowerCube.SIZE/2 + fieldYofs, 0));
-		addPowerCube(new PowerCube(-13 + PowerCube.SIZE + PowerCube.SIZE + fieldXofs, 0.79 + PowerCube.SIZE/2 + PowerCube.SIZE/2 + fieldYofs, 0));
-		addPowerCube(new PowerCube(-13 + PowerCube.SIZE + PowerCube.SIZE + fieldXofs, 0.79 + PowerCube.SIZE/2 - PowerCube.SIZE/2 + fieldYofs, 0));
-		addPowerCube(new PowerCube(-13 + PowerCube.SIZE + PowerCube.SIZE + fieldXofs, 0.79 - PowerCube.SIZE/2 - PowerCube.SIZE/2 + fieldYofs, 0));
+		teamProperties.put(Team.RED, new TeamProperties());
+		teamProperties.put(Team.BLUE, new TeamProperties());
 		
-		addPowerCube(new PowerCube(15.3 + fieldXofs, 0.79 + fieldYofs, 0));
-		addPowerCube(new PowerCube(15.3 - PowerCube.SIZE + fieldXofs, 0.79 - PowerCube.SIZE/2 + fieldYofs, 0));
-		addPowerCube(new PowerCube(15.3 - PowerCube.SIZE + fieldXofs, 0.79 + PowerCube.SIZE/2 + fieldYofs, 0));
-		addPowerCube(new PowerCube(15.3 - PowerCube.SIZE - PowerCube.SIZE + fieldXofs, 0.79 + PowerCube.SIZE/2 + PowerCube.SIZE/2 + fieldYofs, 0));
-		addPowerCube(new PowerCube(15.3 - PowerCube.SIZE - PowerCube.SIZE + fieldXofs, 0.79 + PowerCube.SIZE/2 - PowerCube.SIZE/2 + fieldYofs, 0));
-		addPowerCube(new PowerCube(15.3 - PowerCube.SIZE - PowerCube.SIZE + fieldXofs, 0.79 - PowerCube.SIZE/2 - PowerCube.SIZE/2 + fieldYofs, 0));
+		getProperties(Team.RED).setExchangeSensor(redExchangeSensor);
+		getProperties(Team.RED).setVault(new Vault(Team.RED));
+		
+		getProperties(Team.BLUE).setExchangeSensor(blueExchangeSensor);
+		getProperties(Team.BLUE).setVault(new Vault(Team.BLUE));
 		
 		// create the switches with a random one of the possible orientations
 		
-		boolean[] switchOrientation = getRandomSwitchOrientation();
-		
-		LEDStrip srr = new LEDStrip(50);
-		LEDStrip srb = new LEDStrip(50);
-		LEDStrip sbr = new LEDStrip(50);
-		LEDStrip sbb = new LEDStrip(50);
-		LEDStrip sr = new LEDStrip(50);
-		LEDStrip sb = new LEDStrip(50);
-		
-		Switch blueSwitch = new Switch(10.15 + fieldXofs, 0 + fieldYofs, switchOrientation[0], sbr, sbb);
-		addScale(blueSwitch);
-		scale = new Scale(0.07 + fieldXofs, 0 + fieldYofs, switchOrientation[1], sr, sb);
-		addScale(scale);
-		Switch redSwitch = new Switch(-10.15 + fieldXofs, 0 + fieldYofs, switchOrientation[2], srr, srb);
-		addScale(redSwitch);
-
-		teamProperties.put(Team.RED, new TeamProperties(redSwitch, redExchangeSensor));
-		teamProperties.put(Team.BLUE, new TeamProperties(blueSwitch, blueExchangeSensor));
+		if(Game.isServer() || !Game.isConnected()) {
+    		Scheduler.delayedTask(() -> {
+    			boolean[] switchOrientation = getRandomSwitchOrientation();
+        		setSwitchOrientation(switchOrientation);
+    		}, 20);
+		}
 		
 	}
 	
@@ -300,13 +377,61 @@ public class GameWorld {
 		return poss.get(Rand.range(0, poss.size()-1));
 	}
 
+	public void setSwitchOrientation(boolean[] switchOrientation) {
+		
+		System.out.println(Arrays.toString(switchOrientation));
+		
+//		scales.add(balance);
+//		getWorld().addBody(balance.walls);
+//		walls.add(balance.walls);
+//		scalePlatforms.add(balance.getRedPlatform());
+//		scalePlatforms.add(balance.getBluePlatform());
+//		getWorld().addBody(balance.getBluePlatform().base);
+//		getWorld().addBody(balance.getRedPlatform().base);
+		
+		if(Game.isServer()) {
+			SwitchOrientationPacket sop = new SwitchOrientationPacket(switchOrientation[0] + "", switchOrientation[1] + "", switchOrientation[2] + "");
+			ServerStarter.serverStarter.sendToAll(sop);
+		}
+		
+		List<Balance> bal = new ArrayList<Balance>();
+		bal.addAll(scales);
+		for(Balance b : bal) {
+			scales.remove(b);
+			getWorld().removeBody(b.walls);
+			walls.remove(b.walls);
+			scalePlatforms.remove(b.getBluePlatform());
+			scalePlatforms.remove(b.getRedPlatform());
+			getWorld().removeBody(b.getBluePlatform().base);
+			getWorld().removeBody(b.getRedPlatform().base);
+		}
+		
+		LEDStrip srr = new LEDStrip(50);
+		LEDStrip srb = new LEDStrip(50);
+		LEDStrip sbr = new LEDStrip(50);
+		LEDStrip sbb = new LEDStrip(50);
+		LEDStrip sr = new LEDStrip(50);
+		LEDStrip sb = new LEDStrip(50);
+		
+		Switch blueSwitch = new Switch(10.15 + fieldXofs, 0 + fieldYofs, switchOrientation[0], sbr, sbb);
+		addScale(blueSwitch);
+		this.scale = new Scale(0.07 + fieldXofs, 0 + fieldYofs, switchOrientation[1], sr, sb);
+		addScale(this.scale);
+		Switch redSwitch = new Switch(-10.15 + fieldXofs, 0 + fieldYofs, switchOrientation[2], srr, srb);
+		addScale(redSwitch);
+		
+		getProperties(Team.RED).setSwitch(redSwitch);
+		getProperties(Team.BLUE).setSwitch(blueSwitch);
+	}
+	
 	/**
 	 * Adds a {@link Player} to the world.
 	 * @param pl - the {@link Player} to add.
 	 */
 	public void addPlayer(Player pl) {
 		players.add(pl);
-		getWorld().addBody(pl.base);
+//		pl.constructShip();
+//		getWorld().addBody(pl.base);
 	}
 
 	/**
@@ -328,8 +453,7 @@ public class GameWorld {
 		g.transform(ofs);
 		
 		
-		
-		g.drawImage(getFieldImage().getImage(), 0, 0, (int)(getFieldImage().getWidth() * GameObject.SCALE * 0.05 * FIELD_SCALE), (int)(getFieldImage().getHeight() * GameObject.SCALE * 0.05 * FIELD_SCALE), null);
+		g.drawImage(field.getImage(), 0, 0, (int)(getFieldImage().getWidth() * GameObject.SCALE * 0.05 * FIELD_SCALE), (int)(getFieldImage().getHeight() * GameObject.SCALE * 0.05 * FIELD_SCALE), null);
 		
 		// render the things!!!
 		// each list is cached before iteration to avoid ConcurrentModificationExceptions
@@ -367,10 +491,12 @@ public class GameWorld {
 			if(o != null) o.render(g);
 		}
 		
-		List<Player> pl = new ArrayList<Player>();
-		pl.addAll(players);
-		for(Player p : pl){
-			if(p != null) p.render(g);
+		if(Game.gameplay.getState() != GameState.WAITING_FOR_PLAYERS){
+    		List<Player> pl = new ArrayList<Player>();
+    		pl.addAll(players);
+    		for(Player p : pl){
+    			if(p != null) p.render(g);
+    		}
 		}
 		
 		if(Vars.showCollision){
@@ -380,7 +506,7 @@ public class GameWorld {
 		
 		g.setTransform(ot);
 		
-		renderHUD(g);
+		Game.gameplay.renderHUD(g);
 	}
 	
 	/**
@@ -456,7 +582,7 @@ public class GameWorld {
 		
 		g.setTransform(ot);
 		
-		renderHUD(g);
+		Game.gameplay.renderHUD(g);
 		
 		GameObject.SCALE = realScale;
 	}
@@ -477,135 +603,6 @@ public class GameWorld {
 		trans.concatenate(ofs);
 		
 		return trans;
-	}
-	
-	/**
-	 * Renders the HUD, including game time, scores, active power ups, power cube storage, etc.
-	 * @param g - the {@link Graphics2D} to render onto.
-	 */
-	private void renderHUD(Graphics2D g) {
-		
-		if(Robot.buildMode){
-			g.setFont(Fonts.gamer.deriveFont(40f));
-			g.setColor(Color.WHITE);
-			g.drawString("BUILD MODE", 10, 44);
-			
-			
-			g.setColor(new Color(0.2f, 0.2f, 0.2f, 0.7f));
-			g.fillRect(Game.getWidth() - 100, Game.getHeight() - 100, 100, 100);
-			
-			Player p = Game.getWorld().getSelfPlayer();
-			if(p != null){
-				if(p.buildSelected != null && p.buildPreview != null){
-					AffineTransform trans = g.getTransform();
-					g.translate(Game.getWidth() - 50, Game.getHeight() - 50);
-					p.buildPreview.renderScaled(g);
-					g.setTransform(trans);
-					
-					String num = "" + p.inventory.get(p.buildSelected);
-					
-					g.setFont(Fonts.pixelmix.deriveFont(20f));
-					int x = Game.getWidth() - g.getFontMetrics().stringWidth(num) - 8;
-					
-					GlyphVector gv = g.getFont().createGlyphVector(g.getFontRenderContext(), num);
-					Shape shape = gv.getOutline();
-					g.setStroke(new BasicStroke(4.0f));
-					g.setColor(Color.BLACK);
-					g.translate(x, Game.getHeight() - 10);
-					g.draw(shape);
-					
-					g.setStroke(new BasicStroke(1.0f));
-					g.setColor(Color.WHITE);
-					g.drawString(num, 0, 0);
-					
-					g.setTransform(trans);
-				}
-				
-			}
-		}
-		
-//		System.out.println(power_boost + " " + power_boost_queued);
-		
-		g.setFont(Fonts.pixelmix.deriveFont(20f));
-		
-		if(power_boost != Team.NONE){
-			g.setColor(power_boost.color);
-			String s = "boost (" + (power_boost_timer / 60) + ")";
-			if(power_boost_queued != Team.NONE) s += " (" + power_boost_queued + " queued)";
-			g.drawString(s, 10, Game.getHeight() - 20);
-		}
-		
-		if(power_force != Team.NONE){
-			g.setColor(power_force.color);
-			String s = "force (" + (power_force_timer / 60) + ")";
-			if(power_force_queued != Team.NONE) s += " (" + power_force_queued + " queued)";
-			g.drawString(s, 10, Game.getHeight() - 40);
-		}
-
-		
-		int scoreBoardY = 80;
-		
-		g.setColor(new Color(0.4f, 0.4f, 0.4f, 0.7f));
-		g.fillRoundRect(Game.getWidth()/2 - 150, -50, 300, 140, 50, 50);
-		g.setColor(new Color(0.2f, 0.2f, 0.2f, 0.7f));
-		g.setStroke(new BasicStroke(2f));
-		g.drawRoundRect(Game.getWidth()/2 - 150, -50, 300, 140, 50, 50);
-		g.setStroke(new BasicStroke(1f));
-		
-//		g.drawLine(Game.getWidth()/2, 0, Game.getWidth()/2, 100);
-		
-		
-		g.setFont(Fonts.pixelLCD.deriveFont(40f));
-		
-		// game time
-
-		double time = gameTime / 60;
-		
-		int seconds = (int) (time % 60);
-		String secondsStr = (seconds < 10 ? "0" : "") + seconds; 
-		int minutes = (int) (time / 60);
-		String minutesStr = "" + minutes; 
-		
-		String timeS = minutesStr + ":" + secondsStr;
-		g.setColor(Color.DARK_GRAY);
-		g.drawString(timeS, Game.getWidth()/2 - g.getFontMetrics().stringWidth(timeS)/2 - 3, scoreBoardY - 34 - 3);
-		g.setColor(getSelfPlayer().team.color);
-		g.drawString(timeS, Game.getWidth()/2 - g.getFontMetrics().stringWidth(timeS)/2, scoreBoardY - 34);
-		
-		g.setFont(Fonts.pixelLCD.deriveFont(28f));
-		
-		// scoreboard
-		
-		int colonWidth = g.getFontMetrics().stringWidth(":")/2;
-		
-		g.setColor(Color.DARK_GRAY);
-		int redScore = getScoreWithPenalites(Team.RED);
-		int blueScore = getScoreWithPenalites(Team.BLUE);
-		g.drawString("" + redScore, Game.getWidth()/2 - (colonWidth) - g.getFontMetrics().stringWidth("" + redScore) - 3, scoreBoardY - 3);
-		g.setColor(Team.RED.color);
-		g.drawString("" + redScore, Game.getWidth()/2 - (colonWidth) - g.getFontMetrics().stringWidth("" + redScore), scoreBoardY);
-		
-		g.setColor(Color.DARK_GRAY);
-		g.drawString(":", Game.getWidth()/2 - g.getFontMetrics().stringWidth(":")/2 - 3, scoreBoardY - 3);
-		g.setColor(blueScore > redScore ? Team.BLUE.color : Team.RED.color);
-		g.drawString(":", Game.getWidth()/2 - g.getFontMetrics().stringWidth(":")/2, scoreBoardY);
-		
-		g.setColor(Color.DARK_GRAY);
-		g.drawString("" + blueScore, Game.getWidth()/2 + (colonWidth) - 3, scoreBoardY - 3);
-		g.setColor(Team.BLUE.color);
-		g.drawString("" + blueScore, Game.getWidth()/2 + (colonWidth), scoreBoardY);
-		
-		
-		// power cube storage
-		
-		g.drawImage(PowerCube.spr.getImage(), Game.getWidth() - 80, Game.getHeight() - 80, 60, 60, null);
-		int numCubes = getProperties(getSelfPlayer().team).getCubeStorage();
-		g.setFont(Fonts.pixeled.deriveFont(14f));
-		g.setColor(Color.DARK_GRAY);
-		g.drawString("" + numCubes, Game.getWidth() - 80 + 53, Game.getHeight() - 80 + 65);
-		g.setColor(Color.WHITE);
-		g.drawString("" + numCubes, Game.getWidth() - 80 + 55, Game.getHeight() - 80 + 67);
-		
 	}
 
 	/**
@@ -629,101 +626,169 @@ public class GameWorld {
 			xOffset = -5 * GameObject.SCALE + Game.getDisp().realWidth/2;
     		yOffset = -5 * GameObject.SCALE + Game.getDisp().realHeight/2;
 		}else{
-    		xOffset = -selfPlayer.base.getWorldCenter().x * GameObject.SCALE + Game.getDisp().realWidth/2;
-    		yOffset = -selfPlayer.base.getWorldCenter().y * GameObject.SCALE + Game.getDisp().realHeight/2;
+    		xOffset = -selfPlayer.base.getWorldCenter().x * GameObject.SCALE + Game.getWidth()/2;
+    		yOffset = -selfPlayer.base.getWorldCenter().y * GameObject.SCALE + Game.getHeight()/2;
+		}
+		
+		if(!Game.isServer()) getProperties(Game.getWorld().getSelfPlayer().team).getVault().tick();
+		
+		if(cameraCentered || Game.isServer()){
+			
+//			GameObject.SCALE = 24;
+			
+			int fw = (int)(getFieldImage().getWidth() * GameObject.SCALE * 0.05 * FIELD_SCALE);
+			int fh = (int)(getFieldImage().getHeight() * GameObject.SCALE * 0.05 * FIELD_SCALE);
+			
+			xOffset = -fw/2;
+			xOffset += Game.getWidth()/2;
+			yOffset = -fh/2;
+			yOffset += Game.getHeight()/2;
 		}
 		
 		xOffset = (Math.round((float)(xOffset*100f))/100f);
 		yOffset = (Math.round((float)(yOffset*100f))/100f);
 		
-		// decrease the remaining game time if its more than 0
-		if(gameTime > 0) gameTime--;
-		
 		// power ups
 		
-		if(power_boost_timer > 0){
-			if(power_boost_level % 2 == 0){ // 0 or 2
-    			if(power_boost == Team.RED) getProperties(Team.RED).setSwitchScoreMod(2);
-    			if(power_boost == Team.BLUE) getProperties(Team.BLUE).setSwitchScoreMod(2);
-			}
+		if(Game.gameplay.getState() == GameState.AUTON || Game.gameplay.getState() == GameState.TELEOP) {
+			PowerCube.updateTransitiveCollisions();
 			
-			if(power_boost_level >= 1){ // 1 or 2
-				if(power_boost == Team.RED) getProperties(Team.RED).setScaleScoreMod(2);
-    			if(power_boost == Team.BLUE) getProperties(Team.BLUE).setScaleScoreMod(2);
-			}
-			
-			power_boost_timer--;
-			if(power_boost_timer == 0){
-				getProperties(Team.RED).setSwitchScoreMod(2);
-				getProperties(Team.RED).setScaleScoreMod(2);
-				getProperties(Team.BLUE).setSwitchScoreMod(2);
-				getProperties(Team.BLUE).setScaleScoreMod(2);
+			List<PowerCube> redZoneCubes = new ArrayList<PowerCube>();
+			redZoneCubes.addAll(redPowerCubeZonePowerCubes);
+			for(PowerCube c : redZoneCubes) {
+				boolean inside = redPowerCubeZoneColl.isInContact(c.base);
 				
-				power_boost = Team.NONE;
-				if(power_boost_queued != Team.NONE){
-					forceBoost(power_boost_queued);
-					power_boost_queued = Team.NONE;
+				if(!inside) {
+					redPowerCubeZonePowerCubes.remove(c);
+					List<Player> contacting = c.getTransitives();
+					for(Player p : contacting) {
+						if(p.team != Team.BLUE) {
+							getProperties(Team.BLUE).addPenalty(Pentalty.FOUL, 1);
+						}
+					}
 				}
-			}
-		}
-		
-		if(power_force_timer > 0){
-			if(power_force_level % 2 == 0){ // 0 or 2
-				if(power_force == Team.RED) getSwitch(Team.RED).setOwnerOverride(Team.RED);
-				if(power_force == Team.BLUE) getSwitch(Team.BLUE).setOwnerOverride(Team.BLUE);
+				
 			}
 			
-			if(power_force_level >= 1){ // 1 or 2
-				scale.setOwnerOverride(power_force);
+			List<PowerCube> blueZoneCubes = new ArrayList<PowerCube>();
+			blueZoneCubes.addAll(bluePowerCubeZonePowerCubes);
+			for(PowerCube c : blueZoneCubes) {
+				boolean inside = bluePowerCubeZoneColl.isInContact(c.base);
+				
+				if(!inside) {
+					bluePowerCubeZonePowerCubes.remove(c);
+					List<Player> contacting = c.getTransitives();
+					for(Player p : contacting) {
+						if(p.team != Team.RED) {
+							getProperties(Team.RED).addPenalty(Pentalty.FOUL, 1);
+						}
+					}
+				}
+				
 			}
 			
-			power_force_timer--;
-			if(power_force_timer == 0){
-				power_force = Team.NONE;
-				
-				getSwitch(Team.RED).setOwnerOverride(Team.NONE);
-				getSwitch(Team.BLUE).setOwnerOverride(Team.NONE);
-				scale.setOwnerOverride(Team.NONE);
-				
-				if(power_force_queued != Team.NONE){
-					forceForce(power_force_queued);
-					power_force_queued = Team.NONE;
-				}
-			}
-		}
-		
-		// if a power cube is in a team's exchange, increment their cube storage, add some velocity as a fun little animation, and destroy the physical cube after a bit
-		List<PowerCube> cub = new ArrayList<PowerCube>();
-		cub.addAll(cubes);
-		for(PowerCube c : cub){
-			if(exchanging .contains(c)) continue;
-			for(Team team : getPlayingTeams()){
-				if(getExchangeSensor(team) != null && getExchangeSensor(team).contains(c.base.getWorldCenter())){
-					getProperties(team).addCubeStorage(1);
-					exchanging.add(c);
-					c.base.setLinearVelocity(team == Team.RED ? -40 : 40, 0); // red's exchange is facing left while blue's is facing right
-					Scheduler.delayedTask(() -> {
-						removeCube(c);
-					}, 30);
-				}
-			}
-		}
-		
-		// update the scores for the switches and scale every second (once every 60 ticks)
-		if(Game.getTime() % 60 == 0){
-			for(Team team : getPlayingTeams()){
-				if(getSwitch(team).getOwner() == team){
-					TeamProperties tp = getProperties(team);
-					tp.addScore(tp.getSwitchScoreMod());
-	    		}
-			}
+    		if(boost.getTimer() > 0){
+    			if((boost.getLevel()-1) % 2 == 0){ // 0 or 2
+        			if(boost.getUsing() == Team.RED) getProperties(Team.RED).setSwitchScoreMod(2);
+        			if(boost.getUsing() == Team.BLUE) getProperties(Team.BLUE).setSwitchScoreMod(2);
+    			}
+    			
+    			if((boost.getLevel()-1) >= 1){ // 1 or 2
+    				if(boost.getUsing() == Team.RED) getProperties(Team.RED).setScaleScoreMod(2);
+        			if(boost.getUsing() == Team.BLUE) getProperties(Team.BLUE).setScaleScoreMod(2);
+    			}
+    			
+    			boost.setTimer(boost.getTimer() - 1);
+    			
+    			if(boost.getTimer() == 0){
+    				getProperties(Team.RED).setSwitchScoreMod(1);
+    				getProperties(Team.RED).setScaleScoreMod(1);
+    				getProperties(Team.BLUE).setSwitchScoreMod(1);
+    				getProperties(Team.BLUE).setScaleScoreMod(1);
+    				
+    				boost.setUsing(Team.NONE);
+    				if(boost.getQueued() != Team.NONE){
+    					forceBoost(boost.getQueued());
+    					boost.setQueued(Team.NONE);
+    				}
+    			}
+    		}
     		
-			if(scale.getOwner() != Team.NONE){
-    			TeamProperties tp = getProperties(scale.getOwner());
-    			tp.addScore(tp.getScaleScoreMod());
-			}
+    		if(force.getTimer() > 0){
+    			if((force.getLevel()-1) % 2 == 0){ // 0 or 2
+    				if(force.getUsing() == Team.RED) getSwitch(Team.RED).setOwnerOverride(Team.RED);
+    				if(force.getUsing() == Team.BLUE) getSwitch(Team.BLUE).setOwnerOverride(Team.BLUE);
+    			}
+    			
+    			if((force.getLevel()-1) >= 1){ // 1 or 2
+    				scale.setOwnerOverride(force.getUsing());
+    			}
+    			
+    			force.setTimer(force.getTimer() - 1);
+    			if(force.getTimer() == 0){
+    				force.setUsing(Team.NONE);
+    				
+    				getSwitch(Team.RED).setOwnerOverride(Team.NONE);
+    				getSwitch(Team.BLUE).setOwnerOverride(Team.NONE);
+    				scale.setOwnerOverride(Team.NONE);
+    				
+    				if(force.getQueued() != Team.NONE){
+    					forceForce(force.getQueued());
+    					force.setQueued(Team.NONE);
+    				}
+    			}
+    		}
+
+    		// if a power cube is in a team's exchange, increment their cube storage, add some velocity as a fun little animation, and destroy the physical cube after a bit
+    		List<PowerCube> cub = new ArrayList<PowerCube>();
+    		cub.addAll(cubes);
+    		for(PowerCube c : cub){
+    			if(exchanging.contains(c)) continue;
+    			for(Team team : getPlayingTeams()){
+    				if(getExchangeSensor(team) != null && getExchangeSensor(team).contains(c.base.getWorldCenter())){
+    					c.base.destructionTime = System.currentTimeMillis() + 500;
+    					c.base.creationTime = Game.getTime();
+    					exchanging.add(c);
+    					c.base.setLinearVelocity(team == Team.RED ? -40 : 40, 0); // red's exchange is facing left while blue's is facing right
+    					Scheduler.delayedTask(() -> {
+    						removeCube(c);
+    					}, 30);
+    					
+    					if(Game.isServer() || !Game.isConnected()) {
+    						getProperties(team).addCubeStorage(1);
+    						
+    						if(Game.isServer()) {
+    							UpdateCubeStoragePacket ucsp = new UpdateCubeStoragePacket(getProperties(Team.RED).getCubeStorage() + "", getProperties(Team.BLUE).getCubeStorage() + "");
+    							ServerStarter.serverStarter.sendToAll(ucsp);
+    						}
+    					}
+    					
+    				}
+    			}
+    		}
+    		
+    		// update the scores for the switches and scale every second (once every 60 ticks)
+    		if(Game.isServer() || !Game.isConnected()) {
+        		if(Game.getTime() % 60 == 0){
+        			for(Team team : getPlayingTeams()){
+        				if(getSwitch(team).getOwner() == team){
+        					TeamProperties tp = getProperties(team);
+        					tp.addScore(tp.getSwitchScoreMod());
+        	    		}
+        			}
+            		
+        			if(scale.getOwner() != Team.NONE){
+            			TeamProperties tp = getProperties(scale.getOwner());
+            			tp.addScore(tp.getScaleScoreMod());
+        			}
+        			
+        			if(Game.isServer()) {
+        				UpdateScorePacket usp = new UpdateScorePacket(getProperties(Team.RED).getScore() + "", getProperties(Team.BLUE).getScore() + "");
+        				ServerStarter.serverStarter.sendToAll(usp);
+        			}
+        		}
+    		}
 		}
-		
 		// update the players
 		for(Player p : players){
 			if(p != null) p.tick();
@@ -747,6 +812,12 @@ public class GameWorld {
 			if(o != null) o.tick();
 		}
 		
+		List<PowerCube> pcs = new ArrayList<PowerCube>();
+		pcs.addAll(cubes);
+		for(PowerCube c : pcs){
+			if(c != null) c.tick();
+		}
+		
 		// remove any miscellaneous game objects
 		List<GameObject> rem = new ArrayList<GameObject>();
 		rem.addAll(toRemove);
@@ -755,19 +826,14 @@ public class GameWorld {
 			toRemove.remove(o);
 		}
 		
-		// update the physics world
-		try{
-			getWorld().update(1d/60d);
-		}catch(Exception e){
-			e.printStackTrace();
-		}
+		worldThread.queueUpdate();
 		
 	}
 
 	/**
 	 * Returns the {@link Player} with the specified username.
 	 * @param name - the username to search for.
-	 * @return the {@link Player} with the specified username, or <code>null</code> if they could not be founc.
+	 * @return the {@link Player} with the specified username, or <code>null</code> if they could not be found.
 	 */
 	public Player getPlayer(String name) {
 		for(Player p : players){
@@ -776,6 +842,18 @@ public class GameWorld {
 		return null;
 	}
 
+	/**
+	 * Returns the {@link Player} with the specified {@link Robot}.
+	 * @param rob - the {@link Robot} to search for.
+	 * @return the {@link Player} with the specified {@link Robot}, or <code>null</code> if they could not be found.
+	 */
+	public Player getPlayer(Robot rob) {
+		for(Player p : players){
+			if(p != null && p.getRobot() != null) if(p.getRobot() == rob) return p;
+		}
+		return null;
+	}
+	
 	/**
 	 * @return a {@link List} of all of the connected {@link Player Players}
 	 */
@@ -806,6 +884,24 @@ public class GameWorld {
 	 * @param cube - the {@link PowerCube} to add.
 	 */
 	public void addPowerCube(PowerCube cube){
+		if(Game.isServer()) {
+			AddCubePacket acp = new AddCubePacket(cube.getId() + "", cube.getLocation().x + "", cube.getLocation().y + "");
+			ServerStarter.serverStarter.sendToAll(acp);
+		}
+		cubes.add(cube);
+		getWorld().addBody(cube.base);
+	}
+	
+	/**
+	 * Adds a {@link PowerCube} to the world.
+	 * @param cube - the {@link PowerCube} to add.
+	 */
+	public void addPowerCubeIntoZone(Team team, PowerCube cube){
+		if(Game.isServer()) {
+			AddCubePacket acp = new AddCubePacket(cube.getId() + "", cube.getLocation().x + "", cube.getLocation().y + "");
+			ServerStarter.serverStarter.sendToAll(acp);
+		}
+		(team == Team.RED ? redPowerCubeZonePowerCubes : bluePowerCubeZonePowerCubes).add(cube);
 		cubes.add(cube);
 		getWorld().addBody(cube.base);
 	}
@@ -879,8 +975,8 @@ public class GameWorld {
 	 */
 	public void removeCube(PowerCube cube) {
 		cubes.remove(cube);
-		getWorld().removeBody(cube.base);
 		exchanging.remove(cube);
+		getWorld().removeBody(cube.base);
 	}
 	
 	/**
@@ -895,8 +991,6 @@ public class GameWorld {
 		scalePlatforms.add(balance.getBluePlatform());
 		getWorld().addBody(balance.getBluePlatform().base);
 		getWorld().addBody(balance.getRedPlatform().base);
-		
-		
 	}
 	
 	/**
@@ -921,14 +1015,15 @@ public class GameWorld {
 	 * <code>false</code> otherwise.
 	 */
 	public boolean useBoost(Team team){
-		if(power_force == team) return false;
-		System.out.println("boost " + power_boost_used.contains(team));
-		if(power_boost_used.contains(team)) return false;
+		if(force.getUsing() == team) return false;
+//		System.out.println("boost " + power_boost_used.contains(team));
+		if(boost.getUsed().contains(team)) return false;
+		if(getProperties(team).getBoostLevel() < 1) return false;
 		
-		power_boost_used.add(team);
+		boost.addUsed(team);
 		
-		if(power_boost != Team.NONE) {
-			power_boost_queued = team;
+		if(boost.getUsing() != Team.NONE) {
+			boost.setQueued(team);
 			return true;
 		}
 		
@@ -943,11 +1038,10 @@ public class GameWorld {
 	 * @param team - the {@link Team} who will use boost.
 	 */
 	public void forceBoost(Team team){
-		power_boost = team;
-		power_boost_timer = 60 * BOOST_TIME;
+		boost.setUsing(team);
+		boost.setTimer(60 * BOOST_TIME);
 		
-		if(team == Team.RED) power_boost_level = power_boost_level_red;
-		if(team == Team.BLUE) power_boost_level = power_boost_level_blue;
+		boost.setLevel(getProperties(team).getBoostLevel());
 	}
 	
 	/**
@@ -957,13 +1051,14 @@ public class GameWorld {
 	 * <code>false</code> otherwise.
 	 */
 	public boolean useForce(Team team){
-		if(power_boost == team) return false;
-		if(power_force_used.contains(team)) return false;
+		if(boost.getUsing() == team) return false;
+		if(force.getUsed().contains(team)) return false;
+		if(getProperties(team).getForceLevel() < 1) return false;
 		
-		power_force_used.add(team);
+		force.addUsed(team);
 		
-		if(power_force != Team.NONE) {
-			power_force_queued = team;
+		if(force.getUsing() != Team.NONE) {
+			force.setQueued(team);
 			return true;
 		}
 		
@@ -978,11 +1073,10 @@ public class GameWorld {
 	 * @param team - the {@link Team} who will use force.
 	 */
 	public void forceForce(Team team){
-		power_force = team;
-		power_force_timer = 60 * BOOST_TIME;
+		force.setUsing(team);
+		force.setTimer(60 * BOOST_TIME);
 		
-		if(team == Team.RED) power_force_level = power_force_level_red;
-		if(team == Team.BLUE) power_force_level = power_force_level_blue;
+		force.setLevel(getProperties(team).getForceLevel());
 	}
 	
 	/**
@@ -993,6 +1087,7 @@ public class GameWorld {
 	 */
 	public boolean useLevitate(Team team){
 		if(getProperties(team).getUsedLevitate()) return false;
+		if(getProperties(team).getLevitateLevel() < 3) return false;
 		getProperties(team).setUsedLevitate(true);
 		return true;
 	}
@@ -1001,24 +1096,16 @@ public class GameWorld {
 	 * Resets all power ups to the starting configuration.
 	 */
 	public void resetPowerups(){
-		power_boost = Team.NONE;
-		power_boost_queued = Team.NONE;
-		power_boost_timer = 0;
-		power_boost_level_red = 0;
-		power_boost_level_blue = 0;
-		power_boost_used.clear();
-		
-		power_force = Team.NONE;
-		power_force_queued = Team.NONE;
-		power_force_timer = 0;
-		power_force_level_red = 0;
-		power_force_level_blue = 0;
-		power_force_used.clear();
+		boost.reset();
+		force.reset();
 		
 		for(Team t : getPlayingTeams()){
 			getProperties(t).setUsedLevitate(false);
 			getProperties(t).setSwitchScoreMod(1);
 			getProperties(t).setScaleScoreMod(1);
+			getProperties(t).setBoostLevel(0);
+			getProperties(t).setForceLevel(0);
+			getProperties(t).setLevitateLevel(0);
 		}
 	}
 	
@@ -1150,12 +1237,15 @@ public class GameWorld {
 		List<ScalePlatform> sp = new ArrayList<ScalePlatform>();
 		for(Team t : getPlayingTeams()){
 			TeamProperties tp = getProperties(t);
+			if(tp.getSwitch() == null) continue;
 			sp.add(tp.getSwitch().getRedPlatform());
 			sp.add(tp.getSwitch().getBluePlatform());
 		}
 		
-		sp.add(scale.getBluePlatform());
-		sp.add(scale.getRedPlatform());
+		if(scale != null) {
+    		sp.add(scale.getBluePlatform());
+    		sp.add(scale.getRedPlatform());
+		}
 		
 		return sp;
 	}
@@ -1182,19 +1272,83 @@ public class GameWorld {
 		return mouseWorldPos;
 	}
 
-	/**
-	 * @return the time remaining in the game, in ticks.
-	 */
-	public int getGameTime() {
-		return gameTime;
+	public void reset() {
+		resetPowerups();
+
+		world.removeAllBodies();
+		walls.clear();
+		cubes.clear();
+		scalePlatforms.clear();
+		scales.clear();
+		exchanging.clear();
+		particles.clear();
+		
+		Scheduler.delayedTask(this::initializeWorld, 20);
+		
+		
+		for(Player p : players){
+			p.setLocation(new Point2D.Double(0, 0), 0);
+			world.addBody(p.base);
+			p.constructShip();
+		}
 	}
 
-	/**
-	 * Sets the remaining game time.
-	 * @param gameTime - the remaining game time, in ticks.
-	 */
-	public void setGameTime(int gameTime) {
-		this.gameTime = gameTime;
+	public boolean isCameraCentered() {
+		return cameraCentered;
 	}
 
+	public void setCameraCentered(boolean cameraCentered) {
+		this.cameraCentered = cameraCentered;
+	}
+
+	public Scale getScale() {
+		return scale;
+	}
+
+	public Body getAutoLine() {
+		return autoLineColl;
+	}
+
+	public PowerUp getBoost() {
+		return boost;
+	}
+
+	public PowerUp getForce() {
+		return force;
+	}
+
+	public GameObject getPlatform(Team team) {
+		return team == Team.RED ? redPlatformColl : bluePlatformColl;
+	}
+
+	public PowerCube getPowerCube(int id) {
+		for(PowerCube c : cubes) {
+			if(c.getId() == id) return c;
+		}
+		return null;
+	}
+	
+	public boolean isInClimbRange(Component comp, Team team) {
+		return (team == Team.RED ? redBarColl : blueBarColl).contains(comp.lastBody.getWorldCenter());
+	}
+	
+	public boolean isInPowerCubeZone(Robot rob, Team team) {
+		GameObject zone = team == Team.RED ? redPowerCubeZoneColl : bluePowerCubeZoneColl;
+		for(Component c : rob.getComponents()) {
+			if(zone.isInContact(c.lastBody)) {
+				return true;
+			}
+		}
+		
+		return false;
+	}
+
+	public void updateCubeStorage() {
+		if(Game.isServer()) {
+			UpdateCubeStoragePacket ucsp = new UpdateCubeStoragePacket(getProperties(Team.RED).getCubeStorage() + "", getProperties(Team.BLUE).getCubeStorage() + "");
+			ServerStarter.serverStarter.sendToAll(ucsp);
+		}
+	}
+	
+	
 }

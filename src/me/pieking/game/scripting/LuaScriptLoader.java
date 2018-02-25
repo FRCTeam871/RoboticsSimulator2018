@@ -19,50 +19,17 @@ import org.luaj.vm2.lib.PackageLib;
 import org.luaj.vm2.lib.StringLib;
 import org.luaj.vm2.lib.TableLib;
 import org.luaj.vm2.lib.TwoArgFunction;
+import org.luaj.vm2.lib.ZeroArgFunction;
 import org.luaj.vm2.lib.jse.JseBaseLib;
 import org.luaj.vm2.lib.jse.JseMathLib;
 
 import me.pieking.game.FileSystem;
 import me.pieking.game.Logger;
 
-public class LuaTest {
+public class LuaScriptLoader {
 
 	// These globals are used by the server to compile scripts.
 	static Globals server_globals;
-
-	
-	public static void main(String[] args) {
-		init();
-		
-		LuaScript scr = runScript("inputtest");
-		scr.run();
-		System.out.println("hello");
-		
-		try {
-			Thread.sleep(2000);
-		}catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-		
-		scr.stop();
-		
-		try {
-			Thread.sleep(1000);
-		}catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-		
-		scr.run();
-		System.out.println("hello");
-		
-		try {
-			Thread.sleep(2000);
-		}catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-		
-		scr.stop();
-	}
 
 	public static void init() {
 		// Create server globals with just enough library support to compile user scripts.
@@ -70,9 +37,6 @@ public class LuaTest {
 		server_globals.load(new JseBaseLib());
 		server_globals.load(new PackageLib());
 		server_globals.load(new StringLib());
-		hyperbolic h = new hyperbolic();
-		server_globals.load(h);
-		h.call(LuaValue.valueOf("hyperbolic"), server_globals);
 
 		// To load scripts, we occasionally need a math library in addition to compiler support.
 		// To limit scripts using the debug library, they must be closures, so we only install LuaC.
@@ -144,15 +108,15 @@ public class LuaTest {
 
 		// Set the hook function to immediately throw an Error, which will not be 
 		// handled by any Lua code other than the coroutine.
-//		LuaValue hookfunc = new ZeroArgFunction() {
-//			public LuaValue call() {
-//				// A simple lua error may be caught by the script, but a 
-//				// Java Error will pass through to top and stop the script.
-//				throw new Error("Script overran resource limits.");
-//			}
-//		};
-//		final int instruction_count = 20;
-//		sethook.invoke(LuaValue.varargsOf(new LuaValue[] { thread, hookfunc, LuaValue.EMPTYSTRING, LuaValue.valueOf(instruction_count) }));
+		LuaValue hookfunc = new ZeroArgFunction() {
+			public LuaValue call() {
+				// A simple lua error may be caught by the script, but a 
+				// Java Error will pass through to top and stop the script.
+				throw new Error("Script overran resource limits.");
+			}
+		};
+		final int instruction_count = 20;
+		sethook.invoke(LuaValue.varargsOf(new LuaValue[] { thread, hookfunc, LuaValue.EMPTYSTRING, LuaValue.valueOf(instruction_count) }));
 
 		// When we resume the thread, it will run up to 'instruction_count' instructions
 		// then call the hook function which will error out and stop the script.
@@ -195,6 +159,7 @@ public class LuaTest {
 	public static void applyDefaultLibs(Globals env){
 		addLibrary(env, new LuaLibInput());
 		addLibrary(env, new LuaLibShip());
+		addLibrary(env, new LuaLibField());
 
 		env.set("sleep", new sleep());
 	}
@@ -230,11 +195,32 @@ public class LuaTest {
     		user_globals.load(new JseMathLib());
     		applyDefaultLibs(user_globals);
     
-    		CustomDebugLib cdl = new CustomDebugLib();
-    		user_globals.load(cdl);
-    		
     		LuaValue chunk = server_globals.load(new FileReader(f), name, user_globals);
     		
+    		user_globals.load(new DebugLib());
+    		LuaValue sethook = user_globals.get("debug").get("sethook");
+    		user_globals.set("debug", LuaValue.NIL);
+
+    		// Set up the script to run in its own lua thread, which allows us 
+    		// to set a hook function that limits the script to a specific number of cycles.
+    		// Note that the environment is set to the user globals, even though the 
+    		// compiling is done with the server globals.
+    		LuaThread thread = new LuaThread(user_globals, chunk);
+
+    		// Set the hook function to immediately throw an Error, which will not be 
+    		// handled by any Lua code other than the coroutine.
+    		LuaValue hookfunc = new ZeroArgFunction() {
+    			public LuaValue call() {
+    				// A simple lua error may be caught by the script, but a 
+    				// Java Error will pass through to top and stop the script.
+    				throw new Error("Script overran resource limits.");
+    			}
+    		};
+    		final int instruction_count = 20;
+    		sethook.invoke(LuaValue.varargsOf(new LuaValue[] { thread, hookfunc, LuaValue.EMPTYSTRING, LuaValue.valueOf(instruction_count) }));
+    		
+    		CustomDebugLib cdl = new CustomDebugLib();
+    		user_globals.load(cdl);
     		
     		return new LuaScript(name, user_globals, chunk, cdl);
 		}catch(Exception e){

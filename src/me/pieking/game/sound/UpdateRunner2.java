@@ -30,7 +30,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.sound.sampled.SourceDataLine;
 
 import kuusisto.tinysound.internal.Mixer;
-import me.pieking.game.Game;
 
 /**
  * The UpdateRunner2 class implements Runnable and is what performs automatic

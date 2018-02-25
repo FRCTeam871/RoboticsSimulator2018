@@ -11,6 +11,13 @@ public class CustomDebugLib extends DebugLib {
         if (interrupted) {
             throw new ScriptInterruptException();
         }
+        
+        try {
+			Thread.sleep(5);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+        
         super.onInstruction(pc, v, top);
     }
 

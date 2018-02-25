@@ -1,5 +1,6 @@
 package me.pieking.game.world;
 
+import java.awt.AWTException;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -15,11 +16,13 @@ import java.awt.geom.NoninvertibleTransformException;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.geom.RoundRectangle2D;
+import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
+import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.List;
 
@@ -28,17 +31,20 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 
 import org.dyn4j.dynamics.Body;
 import org.dyn4j.dynamics.BodyFixture;
+import org.dyn4j.dynamics.Force;
+import org.dyn4j.dynamics.Torque;
 import org.dyn4j.dynamics.joint.WeldJoint;
-import org.dyn4j.geometry.Circle;
 import org.dyn4j.geometry.Mass;
 import org.dyn4j.geometry.MassType;
 import org.dyn4j.geometry.Vector2;
+import org.json.JSONObject;
+
+import com.studiohartman.jamepad.ControllerState;
 
 import me.pieking.game.FileSystem;
 import me.pieking.game.Game;
 import me.pieking.game.Location;
-import me.pieking.game.Rand;
-import me.pieking.game.Scheduler;
+import me.pieking.game.Settings;
 import me.pieking.game.Utils;
 import me.pieking.game.gfx.Fonts;
 import me.pieking.game.gfx.Render;
@@ -46,7 +52,6 @@ import me.pieking.game.gfx.ShipFileAccessory;
 import me.pieking.game.gfx.ShipFileView;
 import me.pieking.game.menu.ComponentInfoMenu;
 import me.pieking.game.menu.SelectComponentMenu;
-import me.pieking.game.net.packet.PlayerDiePacket;
 import me.pieking.game.net.packet.PlayerUpdatePacket;
 import me.pieking.game.net.packet.ShipAddComponentPacket;
 import me.pieking.game.net.packet.ShipComponentActivatePacket;
@@ -63,7 +68,6 @@ import me.pieking.game.robot.component.StructureComponentSlope;
 import me.pieking.game.robot.component.StructureComponentSquare;
 import me.pieking.game.sound.Sound;
 import me.pieking.game.sound.SoundClip;
-import me.pieking.game.world.GameObjectFilter.FilterType;
 import me.pieking.game.world.Balance.Team;
 
 public class Player {
@@ -92,9 +96,6 @@ public class Player {
 	public Component buildPreview;
 	private List<GameObject> bods;
 	
-	public int health = 100;
-	public int maxHealth = 100;
-	
 	public List<WeldJoint> joints = new ArrayList<WeldJoint>();
 	
 	public boolean dead = false;
@@ -102,6 +103,19 @@ public class Player {
 	public boolean noClip = false;
 	
 	public Team team = Team.NONE;
+	
+	private List<Torque> torquequeue = new ArrayList<Torque>();
+	private List<Force> forceQueue = new ArrayList<Force>();
+	
+	private boolean wasAPressed = false;
+	
+	private double height = 0f;
+	
+	private boolean climbing = false;
+	
+	private JSONObject teamInfo;
+	
+	private boolean doReset = false;
 	
 	public Player(String name, double x, double y, Team team) {
 		this.team = team;
@@ -130,6 +144,19 @@ public class Player {
 		inventory.put(ClawGrabberComponent.class, 5);
 		inventory.put(ComponentBumberSide.class, 20);
 		inventory.put(ComponentBumberCorner.class, 20);
+		
+		if(name.matches("Team \\d+")) {
+			int teamNum = Integer.parseInt(name.substring(5));
+    		try {
+    			System.out.println("Polling TBA for team " + teamNum + " ...");
+    			JSONObject json = Utils.getTeamInfo(teamNum);
+    			System.out.println("Got response:");
+    			System.out.println(json.toString(2));
+    			if(!json.has("Errors")) setTeamInfo(json);
+    		}catch(Exception e) {
+    			e.printStackTrace();
+    		}
+		}
 		
 //		List<Component> comp = new ArrayList<Component>();
 //		comp.add(new StructureComponentSlope(1, 0, -90));
@@ -172,14 +199,66 @@ public class Player {
 	}
 	
 	public void tick(){
+		
+		Vector2 vel = base.getLinearVelocity();
+		if(Math.abs(vel.x - activeLinearX) > 50 || Math.abs(vel.y - activeLinearY) > 50) {
+			System.out.println("GLITCH");
+			doReset = true;
+		}else if(doReset) {
+			doReset = false;
+			reconstruct();
+			System.out.println("RESET");
+		}
+		
 		if(!dead){
     		if(this == Game.getWorld().getSelfPlayer()){
     			tickControls();
+    		}else {
+//    			System.out.println(activeLinearY);
+    			base.setLinearVelocity(activeLinearX * 1, activeLinearY * 1);
+    			base.setAngularVelocity(activeAngularRot * 1);
     		}
+
+//    		base.applyForce(new Vector2(1000, 0));
+    		
+    		List<Torque> torque = new ArrayList<Torque>();
+    		torque.addAll(torquequeue);
+    		for(Torque t : torque) {
+    			if(t == null) continue; 
+    			base.applyTorque(t);
+    			torquequeue.remove(t);
+    		}
+    		
+    		List<Force> Force = new ArrayList<Force>();
+    		Force.addAll(forceQueue);
+    		for(Force t : Force) {
+    			if(t == null) continue; 
+    			base.applyForce(t);
+    			forceQueue.remove(t);
+    		}
+    		
+//    		if(robot.getAutonScript() != null && robot.getAutonScript().isRunning()) {
+//    			LuaThread ltr = robot.getAutonScript().thread;
+//    			new Thread(() -> {
+//    				ltr.state.lua_yield(LuaValue.NIL);
+//    				try {
+//						Thread.sleep(100);
+//					} catch (InterruptedException e) {
+//						// TODO Auto-generated catch block
+//						e.printStackTrace();
+//					}
+//    				ltr.state.lua_resume(ltr, LuaValue.NIL);
+//    			}).start();
+//    		}
     
-    //		if(Game.getTime() % 600 == 0 && ship != null){
-    //			constructShip();
-    //		}
+//    		if(Game.getTime() % 600 == 0 && robot != null){
+//    			constructShip();
+//    		}
+    		
+    		if(getLocation().x < 0 || getLocation().x > 60 || getLocation().y < 0 || getLocation().y > 30) {
+    			constructShip();
+    			setLocation(new Point2D.Float(12, 10), 0);
+    		}
     		
     		if(robot != null) robot.tick();
 		}
@@ -200,7 +279,7 @@ public class Player {
     				scm = new SelectComponentMenu(createPreviewComponents());
     				Render.showMenu(scm);
     				hoverGrid = new Point(-1, -1);
-    			}else if(cm == null || !cm.insideMenu(Game.mouseLoc())){
+    			}else if((cm == null || !cm.insideMenu(Game.mouseLoc())) && Robot.buildMode){
     				Point prevGrid = selectedGrid;
     				selectedGrid = hoverGrid;
     				Component cmp = robot.getComponent(selectedGrid);
@@ -249,7 +328,6 @@ public class Player {
     							Game.sendPacket(scap);
     						}
     					}else if(Game.keyHandler().isPressed(KeyEvent.VK_SHIFT)){
-    						damage(100);
     						deleteSelected();
     					}else{
         					cm = new ComponentInfoMenu(selectedComponent);
@@ -272,7 +350,6 @@ public class Player {
     					Component c = createComponent(buildSelected, hoverGrid.x, hoverGrid.y, buildPreview.rot);
     					if(robot.addComponent(c)){
     						invSubtract(buildSelected, 1);
-    						damage(-100);
     					}
     					constructShip();
     				}catch (NoSuchMethodException | SecurityException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException | UnsupportedEncodingException | ClassNotFoundException e) {
@@ -305,49 +382,174 @@ public class Player {
 //			base.translate(trans);
 //		}
 		
-		if(Game.keyHandler().isPressed(KeyEvent.VK_UP)){
-			float speed = 10f;
+		if(robot.isEnabled()){
+//			if(robot.canMove()) {
+//        		if(Game.keyHandler().isPressed(KeyEvent.VK_UP)){
+//        			float speed = 10f;
+//        			
+//        			if(Game.keyHandler().isPressed(KeyEvent.VK_SHIFT)) speed *= 5; 
+//        			
+//        			Point2D.Float pt = Utils.polarToCartesian((float) Math.toRadians(Math.toDegrees(base.getTransform().getRotation()) + 90), speed);
+//        			Vector2 vec = base.getWorldCenter().subtract(base.getWorldCenter().copy().add(pt.x, pt.y));
+//        			base.applyForce(vec);
+//        		}
+//			}
+    		
+    		double speedMultiplier = Game.keyHandler().isPressed(KeyEvent.VK_SHIFT) ? 1 : 1;
+    		speedMultiplier *= 5;
+    		
+    		double mechPower = 110 * speedMultiplier;
+    		
+    		ControllerState cont = Game.controllerState();
+    		
+    		if(cont.isConnected) {
+    			double rt = cont.rightTrigger;
+    			if(rt < 0.05) rt = 0;
+    			double lt = cont.leftTrigger;
+    			if(rt < 0.05) rt = 0;
+    			
+    			float liftFactor = 48f;
+    			
+    			if(isClimbing()) liftFactor *= 4;
+    			
+    			double newHeight = Math.max(0f, Math.min(height + (rt / liftFactor) - (lt / liftFactor), 1f));
+    			
+    			ClawGrabberComponent claw = null;
+				for(Component c : robot.getComponents()) {
+					if(c instanceof ClawGrabberComponent) {
+						claw = (ClawGrabberComponent)c;
+					}
+				}
+				
+				if(claw != null) {
+    				if(Game.getWorld().isInClimbRange(claw, team)) {
+    					if(newHeight < height && height >= 0.98) {
+    						setClimbing(true);
+    					}else if(newHeight > height && newHeight >= 0.98) {
+    						setClimbing(false);
+    					}
+    				}else {
+    					setClimbing(false);
+    				}
+				}
+    			
+    			height = newHeight; 
+    			
+//    			mechPower *= (rt * 5)+1;
+    			
+    			double mag = cont.leftStickMagnitude;
+    			if(mag < 0.25) mag = 0;
+    			
+    			mag *= mechPower;
+    			
+    			if(robot.canMove()) {
+        			Vector2 v = new Vector2(Math.toRadians(-cont.leftStickAngle));
+        			v.setMagnitude(mag);
+        			base.applyForce(v);
+    			
+        			double rot = cont.rightStickX;
+        			if(Math.abs(rot) < 0.25) rot = 0;
+        			base.applyTorque(200 * rot * speedMultiplier);
+    			}
+    			
+    			boolean nowAPressed = cont.rb;
+    			
+    			if(nowAPressed && !wasAPressed) {
+    				java.awt.Robot r;
+					try {
+						r = new java.awt.Robot();
+						r.keyPress(KeyEvent.VK_SPACE);
+					} catch (AWTException e) {
+						e.printStackTrace();
+					}
+    			}else if(!nowAPressed && wasAPressed) {
+    				java.awt.Robot r;
+					try {
+						r = new java.awt.Robot();
+						r.keyRelease(KeyEvent.VK_SPACE);
+					} catch (AWTException e) {
+						e.printStackTrace();
+					}
+    			}
+    			
+    			wasAPressed = nowAPressed;
+    			
+    			if(cont.rightStickClick) {
+    				double nz = GameObject.ZOOM_SCALE + (cont.rightStickY/2) * (GameObject.SCALE/10);
+    				GameObject.ZOOM_SCALE = Math.max(-50, Math.min(nz, 50));
+    			}
+    		}
+    		
+    		if(robot.canMove()) {
+        		if(Game.keyHandler().isPressed(KeyEvent.VK_W)){
+        			Vector2 vec = base.getWorldCenter().subtract(base.getWorldCenter().copy().add(0, mechPower));
+        			base.applyForce(vec);
+        		}
+        		
+        		if(Game.keyHandler().isPressed(KeyEvent.VK_S)){
+        			Vector2 vec = base.getWorldCenter().subtract(base.getWorldCenter().copy().add(0, -mechPower));
+        			base.applyForce(vec);
+        		}
+        		
+        		if(Game.keyHandler().isPressed(KeyEvent.VK_A)){
+        			Vector2 vec = base.getWorldCenter().subtract(base.getWorldCenter().copy().add(mechPower, 0));
+        			base.applyForce(vec);
+        		}
+        		
+        		if(Game.keyHandler().isPressed(KeyEvent.VK_D)){
+        			Vector2 vec = base.getWorldCenter().subtract(base.getWorldCenter().copy().add(-mechPower, 0));
+        			base.applyForce(vec);
+        		}
+        		
+        		if(Game.keyHandler().isPressed(KeyEvent.VK_LEFT)){
+        			base.applyTorque(-200 * speedMultiplier);
+        		}else if(Game.keyHandler().isPressed(KeyEvent.VK_RIGHT)){
+        			base.applyTorque(200 * speedMultiplier);
+        		}else{
+//        			base.setAngularVelocity(base.getAngularVelocity() * 0.7);
+        		}
+    		}
+    		
+    		// claw height
+    		
+			float liftFactor = 48f;
 			
-			if(Game.keyHandler().isPressed(KeyEvent.VK_SHIFT)) speed *= 5; 
+			if(isClimbing()) liftFactor *= 4;
 			
-			Point2D.Float pt = Utils.polarToCartesian((float) Math.toRadians(Math.toDegrees(base.getTransform().getRotation()) + 90), speed);
-			Vector2 vec = base.getWorldCenter().subtract(base.getWorldCenter().copy().add(pt.x, pt.y));
-			base.applyForce(vec);
-		}
-		
-		double speedMultiplier = Game.keyHandler().isPressed(KeyEvent.VK_SHIFT) ? 5 : 1;
-		
-		double mechPower = 110 * speedMultiplier;
-		
-		if(Game.keyHandler().isPressed(KeyEvent.VK_W)){
-			Vector2 vec = base.getWorldCenter().subtract(base.getWorldCenter().copy().add(0, mechPower));
-			base.applyForce(vec);
-		}
-		
-		if(Game.keyHandler().isPressed(KeyEvent.VK_S)){
-			Vector2 vec = base.getWorldCenter().subtract(base.getWorldCenter().copy().add(0, -mechPower));
-			base.applyForce(vec);
-		}
-		
-		if(Game.keyHandler().isPressed(KeyEvent.VK_A)){
-			Vector2 vec = base.getWorldCenter().subtract(base.getWorldCenter().copy().add(mechPower, 0));
-			base.applyForce(vec);
-		}
-		
-		if(Game.keyHandler().isPressed(KeyEvent.VK_D)){
-			Vector2 vec = base.getWorldCenter().subtract(base.getWorldCenter().copy().add(-mechPower, 0));
-			base.applyForce(vec);
-		}
-		
-		if(Game.keyHandler().isPressed(KeyEvent.VK_LEFT)){
-			base.applyTorque(-200 * speedMultiplier);
-		}else if(Game.keyHandler().isPressed(KeyEvent.VK_RIGHT)){
-			base.applyTorque(200 * speedMultiplier);
-		}else{
-			base.setAngularVelocity(base.getAngularVelocity() * 0.001);
+			double newHeight = height;
+			
+			if(Game.keyHandler().isPressed(KeyEvent.VK_UP)){
+				newHeight = Math.max(0f, Math.min(height + (1 / liftFactor), 1f));
+			}else if(Game.keyHandler().isPressed(KeyEvent.VK_DOWN)){
+				newHeight = Math.max(0f, Math.min(height - (1 / liftFactor), 1f));
+			}
+			
+//			System.out.println(newHeight);
+			
+			ClawGrabberComponent claw = null;
+			for(Component c : robot.getComponents()) {
+				if(c instanceof ClawGrabberComponent) {
+					claw = (ClawGrabberComponent)c;
+				}
+			}
+			
+			if(claw != null) {
+				if(Game.getWorld().isInClimbRange(claw, team)) {
+					if(newHeight < height && height >= 0.98) {
+						setClimbing(true);
+					}else if(newHeight > height && newHeight >= 0.98) {
+						setClimbing(false);
+					}
+				}else {
+					setClimbing(false);
+				}
+			}
+			
+			height = newHeight; 
+    		
 		}
 //		
-		if(Game.getTime() % 10 == 0 && !dead){
+		if(Game.getTime() % Settings.playerUpdateInterval == 0 && !dead){
 			sendServerMotion();
 		}
 //		
@@ -388,6 +590,12 @@ public class Player {
 	}
 
 	public List<Component> previewComponents = createPreviewComponents();
+
+	private float activeLinearX;
+
+	private float activeLinearY;
+
+	private float activeAngularRot;
 	
 	public List<Component> createPreviewComponents() {
 		
@@ -413,14 +621,17 @@ public class Player {
 				e.printStackTrace();
 			}
 		}
-		System.out.println("done");
+//		System.out.println("done");
 		return comp;
 	}
 
 	public void sendServerMotion() {
-//		System.out.println(base.getTransform().getTranslation().x + " " + base.getTransform().getTranslation().y);
-		PlayerUpdatePacket pack = new PlayerUpdatePacket(name, base.getWorldCenter().x + "", base.getWorldCenter().y + "", base.getLinearVelocity().x + "", base.getLinearVelocity().y + "", base.getTransform().getRotation() + "", base.getAngularVelocity() + "");
+		PlayerUpdatePacket pack = createUpdatePacket();
 		Game.sendPacket(pack);
+	}
+	
+	public PlayerUpdatePacket createUpdatePacket() {
+		return new PlayerUpdatePacket(name, base.getWorldCenter().x + "", base.getWorldCenter().y + "", base.getLinearVelocity().x + "", base.getLinearVelocity().y + "", base.getTransform().getRotation() + "", base.getAngularVelocity()*2 + "", height + "", climbing + "");
 	}
 
 	public Location getLocation() {
@@ -433,9 +644,9 @@ public class Player {
 		
 		if(!Robot.buildMode) robot.render(g);
 		
+		int gridSize = robot.getGridSize();
+		float gridBoxSize = Component.unitSize;
 		if(this == Game.getWorld().getSelfPlayer()){
-    		int gridSize = robot.getGridSize();
-    		float gridBoxSize = Component.unitSize;
     		
     		AffineTransform oldtrans = g.getTransform();
     		AffineTransform trans = new AffineTransform();
@@ -485,7 +696,7 @@ public class Player {
     			for(int y = 0; y < gridSize; y++){
     				g.setColor(c1);
     				
-    				if(hoverGrid.x == x && hoverGrid.y == y){
+    				if(hoverGrid.x == x && hoverGrid.y == y && Robot.buildMode){
     					
     					Component c = robot.getComponent(hoverGrid);
     					if(c != null){
@@ -599,9 +810,41 @@ public class Player {
     		}
 			
 			g.setStroke(new BasicStroke(1));
-    		g.setTransform(oldtrans);
+			
+			g.setTransform(oldtrans);
     		
 		}
+		
+		AffineTransform tr = g.getTransform();
+		
+		AffineTransform trans = new AffineTransform();
+		
+		trans.concatenate(tr);
+//		trans.rotate(base.getTransform().getRotation(), getLocation().x, getLocation().y);
+		trans.translate(getLocation().x * GameObject.SCALE, getLocation().y * GameObject.SCALE);
+		trans.translate(-0.5 * gridBoxSize * gridSize, -0.5 * gridBoxSize * gridSize);
+		g.setTransform(trans);
+		
+		
+		if(teamInfo != null && teamInfo.has("nickname") && !teamInfo.getString("nickname").equals(name)) {
+			g.setColor(Color.WHITE);
+			g.setFont(Fonts.pixelmix.deriveFont(12f));
+			g.drawString(name, 0 - g.getFontMetrics().stringWidth(name)/2, -10);
+			
+			String nick = teamInfo.getString("nickname");
+			List<String> str = Utils.wrapString(nick, 150, g.getFontMetrics());
+//			System.out.println(str);
+			
+			for(int i = 0; i < str.size(); i++) {
+				g.drawString(str.get(i).trim(), 0 - g.getFontMetrics().stringWidth(str.get(i).trim())/2, 14 + 14*i);
+			}
+		}else {
+			g.setColor(Color.WHITE);
+			g.setFont(Fonts.pixelmix.deriveFont(12f));
+			g.drawString(name, 0 - g.getFontMetrics().stringWidth(name)/2, 0);
+		}
+		
+		g.setTransform(tr);
 		
 //		base.render(g);
 	}
@@ -625,11 +868,11 @@ public class Player {
 		
 		long start = System.currentTimeMillis();
 
-		System.out.println(clazz.getSimpleName());
+//		System.out.println(clazz.getSimpleName());
 		
 		Component comp = c.newInstance(x, y, rot);
 
-		System.out.println(System.currentTimeMillis() - start);
+//		System.out.println(System.currentTimeMillis() - start);
 		
 		comp.lastBody = comp.createBody(this);
 		comp.lastBody.rotate(Math.toRadians(comp.rot));
@@ -658,7 +901,36 @@ public class Player {
 		
 		joints.clear();
 		
+		List<BodyFixture> fix = robot.constructFixtures();
 		bods = robot.construct();
+		GameObject allColl = new GameObject();
+		
+		for(BodyFixture f : fix) {
+//			System.out.println(f.createMass().getMass());
+			allColl.addFixture(f);
+		}
+		
+		allColl.setMass(MassType.NORMAL);
+		
+		double rot = getRotation();
+//		allColl.translate(base.getWorldCenter());
+		if(base != null) {
+			
+			while(Game.getWorld().getWorld().containsBody(base)) {
+				try {
+					Game.getWorld().getWorld().removeBody(base);
+				}catch(ConcurrentModificationException e) {}
+			}
+			
+			allColl.translateToOrigin();
+			allColl.translate(base.getWorldCenter());
+		}
+		base = allColl;
+		base.setAngularDamping(GameWorld.getAngularDamping() * 0.75);
+		base.setLinearDamping(GameWorld.getLinearDamping());
+		Game.getWorld().getWorld().addBody(base);
+//		setRotation(0);
+//		translateToOrigin();
 		
 //		System.out.println(bods);
 		
@@ -669,7 +941,11 @@ public class Player {
 		
 		for(GameObject b : bods){
 			
-			WeldJoint wj = new WeldJoint(b, base, new Vector2());
+			for(BodyFixture bf : b.getFixtures()) {
+				bf.setSensor(true);
+			}
+			
+			WeldJoint wj = new WeldJoint(b, base, base.getWorldCenter());
 			wj.setCollisionAllowed(false);
 			wj.setDampingRatio(1);
 			wj.setFrequency(0);
@@ -678,7 +954,7 @@ public class Player {
 			
 			for(GameObject b2 : bods){
 				if(b2 == b) continue;
-				wj = new WeldJoint(b, b2, new Vector2());
+				wj = new WeldJoint(b, b2, base.getWorldCenter());
 				wj.setCollisionAllowed(false);
 				wj.setDampingRatio(1);
 				wj.setFrequency(0);
@@ -697,13 +973,6 @@ public class Player {
 		
 		this.robot = sh;
 		constructShip();
-		int newHealth = 0;
-		for(Component c : robot.getComponents()){
-			newHealth += 100;
-		}
-		
-		maxHealth = newHealth;
-		health = newHealth;
 	}
 	
 	public void deleteSelected(){
@@ -731,98 +1000,14 @@ public class Player {
 				((ActivatableComponent) c).deactivate();
 			}
 			
-			System.out.println("remove " + c);
+//			System.out.println("remove " + c);
 			
 			robot.removeComponent(c);
 			//invAdd(c.getClass(), 1); // TODO: should the player get the component back?
 			constructShip();
 			
-			damage(50);
 //			health -= 100;
 		}
-	}
-	
-	public void damage(int amt){
-		health -= amt;
-		
-		if(health > maxHealth) maxHealth = health;
-		
-		if(health <= 0){
-			die();
-		}
-	}
-	
-	public void die(){
-		
-		if(dead) return;
-		
-		dead = true;
-		for(WeldJoint j : joints){
-			Game.getWorld().getWorld().removeJoint(j);
-		}
-		
-		if(this == Game.getWorld().getSelfPlayer()){
-			PlayerDiePacket pdp = new PlayerDiePacket(name);
-			Game.sendPacket(pdp);
-			
-			Scheduler.delayedTask(() -> {
-				chooseShip();
-				translateToOrigin();
-				translate(Rand.range(-10, 10), Rand.range(-5, 5));
-				setRotation(0);
-				base.setLinearVelocity(0, 0);
-				base.setAngularVelocity(0);
-			}, 180);
-			
-		}
-		
-		for(Component c : robot.getComponents()){
-			Vector2 v = c.lastBody.getWorldCenter().subtract(base.getWorldCenter()).multiply(6);
-			Vector2 rand = new Vector2(Rand.range(-2f, 2f), Rand.range(-2f, 2f));
-			v.add(rand);
-			c.lastBody.applyForce(v);
-			c.lastBody.setAngularVelocity(Rand.range(-2f, 2f));
-			
-			if(c instanceof ActivatableComponent){
-				((ActivatableComponent) c).deactivate();
-			}
-			
-			final Component com = c;
-			Scheduler.delayedTask(() -> {
-				ShipRemoveComponentPacket srcp = new ShipRemoveComponentPacket(name, com.bounds.x + "", com.bounds.y + "");
-				Game.sendPacket(srcp);
-				robot.removeComponent(com);
-				
-				Game.getWorld().getWorld().removeBody(com.lastBody);
-			}, Rand.range(60 * 3, 60 * 5));
-			
-			for(int i = 0; i < 10; i++){
-				GameObject fire = new GameObject();
-				BodyFixture fixture = new BodyFixture(new Circle(Rand.range(2.5f, 4f) / 45f));
-				fire.addFixture(fixture);
-				//fixture.setSensor(true);
-				fixture.setFilter(new GameObjectFilter(FilterType.PARTICLE));
-				fire.translate(base.getWorldCenter());
-				fire.setMass(MassType.NORMAL);
-				Color col = new Color(255, Rand.range(70, 140), 0);
-				float shade = Rand.range(0.1f, 0.6f);
-				col = new Color(0.8f, shade, 0f, 1f);
-				//System.out.println(lastBody.getLinearVelocity().getMagnitude());
-				
-				fire.color = col;
-				//System.out.println(lastBody.getLinearVelocity().getMagnitude());
-				Vector2 rand2 = new Vector2(Rand.range(-1f, 1f), Rand.range(-1f, 1f));
-				fire.applyForce(v.copy().multiply(0.5).add(rand2));
-				fire.destructionTime = fire.creationTime + 2000;
-				
-				Game.getWorld().addParticle(fire);
-			}
-			
-		}
-		
-		s_explode.stop();
-		s_explode.start();
-		
 	}
 	
 	private void chooseShip() {
@@ -884,30 +1069,132 @@ public class Player {
 	}
 
 	public Robot selectShip() {
-		JFileChooser chooser = new JFileChooser();
-		chooser.setAccessory(new ShipFileAccessory(chooser));
-		chooser.setFileView(new ShipFileView());
-		FileNameExtensionFilter filter = new FileNameExtensionFilter("ROBOT Files", "rob");
-	    chooser.addChoosableFileFilter(filter);
-	    chooser.setCurrentDirectory(FileSystem.getFolder("robots"));
-	    chooser.setAcceptAllFileFilterUsed(true);
-	    chooser.setMultiSelectionEnabled(false);
-	    chooser.setPreferredSize(new Dimension(500, 600));
-	    int returnVal = chooser.showOpenDialog(null);
-	    if(returnVal == JFileChooser.APPROVE_OPTION) {
-	    	try {
-	    		return Robot.load(chooser.getSelectedFile(), this);
-			}catch (ClassNotFoundException | NoSuchMethodException | SecurityException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException | IOException e) {
+		boolean autoSelect = true;
+		if(Game.QUICK_CONNECT || autoSelect) {
+			File f = FileSystem.getFile("robots/default.rob");
+			
+			try {
+	    		return Robot.load(f, this);
+			}catch (Exception e) {
 				e.printStackTrace();
 			}
-	    }else{
-	    	try {
-	    		return Robot.load("new", this);
-			}catch (ClassNotFoundException | NoSuchMethodException | SecurityException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException | IOException e) {
-				e.printStackTrace();
-			}
-	    }
+			
+			return robot;
+		}else {
+    		JFileChooser chooser = new JFileChooser();
+    		chooser.setAccessory(new ShipFileAccessory(chooser));
+    		chooser.setFileView(new ShipFileView());
+    		FileNameExtensionFilter filter = new FileNameExtensionFilter("ROBOT Files", "rob");
+    	    chooser.addChoosableFileFilter(filter);
+    	    chooser.setCurrentDirectory(FileSystem.getFolder("robots"));
+    	    chooser.setAcceptAllFileFilterUsed(true);
+    	    chooser.setMultiSelectionEnabled(false);
+    	    chooser.setPreferredSize(new Dimension(500, 600));
+    	    int returnVal = chooser.showOpenDialog(null);
+    	    if(returnVal == JFileChooser.APPROVE_OPTION) {
+    	    	try {
+    	    		return Robot.load(chooser.getSelectedFile(), this);
+    			}catch (Exception e) {
+    				e.printStackTrace();
+    			}
+    	    }else{
+    	    	try {
+    	    		return Robot.load("new", this);
+    			}catch (Exception e) {
+    				e.printStackTrace();
+    			}
+    	    }
+    		return robot;
+		}
+	}
+
+	public Robot getRobot() {
 		return robot;
+	}
+
+	public void setLocation(Point2D pt, double rot) {
+		translateToOrigin();
+		translate(pt.getX(), pt.getY());
+		setRotation(rot);
+	}
+	
+	public void queueTorque(Torque torque) {
+		torquequeue.add(torque);
+	}
+	
+	public void queueForce(Force force) {
+		forceQueue.add(force);
+	}
+
+	public double getRotation() {
+		return base.getTransform().getRotation();
+	}
+
+	public void setActiveLinearVelocity(float xa, float ya) {
+		this.activeLinearX = xa;
+		this.activeLinearY = ya;
+	}
+
+	public void setActiveAngularVelocity(float rotA) {
+		this.activeAngularRot = rotA;
+	}
+	
+	public double getHeight() {
+		return height;
+	}
+	
+	public double getRobotHeight() {
+		return height;
+	}
+
+	public boolean isClimbing() {
+		return climbing;
+	}
+
+	public void setClimbing(boolean climbing) {
+		if(climbing) {
+			base.setLinearVelocity(0, 0);
+			base.setAngularVelocity(0);
+			
+			for(Component c : robot.getComponents()) {
+				c.lastBody.setLinearVelocity(0, 0);
+				c.lastBody.setAngularVelocity(0);
+			}
+		}
+//		System.out.println(climbing);
+		if(robot != null) robot.setCanMove(!climbing);
+		this.climbing = climbing;
+	}
+
+	public boolean isInContact(PowerCube cube) {
+		if(robot == null) return false;
+		for(Component c : robot.getComponents()) {
+			if(c.lastBody.isInContact(cube.base)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public void setHeight(float height) {
+		this.height = height;
+	}
+
+	public JSONObject getTeamInfo() {
+		return teamInfo;
+	}
+
+	public void setTeamInfo(JSONObject teamInfo) {
+		this.teamInfo = teamInfo;
+	}
+	
+	public void reconstruct() {
+		double rot = getRotation();
+		constructShip();
+		constructShip();
+		setRotation(rot);
+		base.setLinearVelocity(new Vector2(activeLinearX, activeLinearY));
+		base.setAngularVelocity(activeAngularRot);
 	}
 	
 }

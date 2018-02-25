@@ -21,16 +21,42 @@ public class ClientStarter {
 	
 	private ClientStarter() {
 		
-		String rawip = JOptionPane.showInputDialog("Enter an IP: ", "localhost:1341"); //47.18.146.218
+//		new Thread(() -> {
+//			while (true) {
+//				ControllerState state = Game.controllerState();
+//				if(state != null) {
+//    				if(state.isConnected) {
+//    					try {
+//    						java.awt.Robot r = new java.awt.Robot();
+//    						if(state.leftStickClick) r.mouseMove(MouseInfo.getPointerInfo().getLocation().x + (int)(state.leftStickX * 2), MouseInfo.getPointerInfo().getLocation().y - (int)(state.leftStickY * 5));
+//    					} catch (AWTException e) {
+//    						e.printStackTrace();
+//    					}
+//    				}
+//    			}
+//				
+//				try {
+//					Thread.sleep(10);
+//				} catch (InterruptedException e) {
+//					e.printStackTrace();
+//				}
+//			}
+//		}).start();
+		
+		String rawip = "localhost:" + ServerStarter.DEFAULT_PORT;
+		if(!Game.QUICK_CONNECT) rawip = JOptionPane.showInputDialog("Enter an IP: ", "localhost:" + ServerStarter.DEFAULT_PORT);
 		
 		String ip = rawip.split(":")[0];
 		int port = Integer.parseInt(rawip.split(":")[1]);
 		
 		System.out.println(ip + " " + port);
 		
-		client = new MyClient(ip, port, port);
-		client.getListener();
-		client.setListener(new ClientListener());
+		MyClient cl = new MyClient(ip, port, port);
+		cl.setListener(new ClientListener());
+		
+		client = cl;
+		
+		System.out.println("client = " + client + " " + client.getListener());
 		
 		hasEnteredIp = true;
 	}
@@ -50,7 +76,7 @@ public class ClientStarter {
 		String className = p.getClass().getSimpleName();
 //		System.out.println("write " + className + "|" + p.format());
 		
-		if(client.isConnected()) client.getServerConnection().sendTcp(className + "|" + p.format());
+		if(client.isConnected()) client.getServerConnection().sendUdp(className + "|" + p.format());
 	}
 	
 	public void recieve(String msg) throws ClassNotFoundException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
@@ -83,7 +109,9 @@ public class ClientStarter {
 			System.out.println(msg);
 		}
 		
-		p.doAction();
+//		System.out.println(msg);
+		
+		Game.queuePacket(p);
 		
 	}
 	

@@ -2,28 +2,40 @@ package me.pieking.game.world;
 
 import java.util.HashMap;
 
+import me.pieking.game.Game;
+import me.pieking.game.Vault;
+
 public class TeamProperties {
 	private Switch teamSwitch;
 	private GameObject exchangeSensor;
 	private int cubeStorage = 0;
 	private HashMap<Pentalty, Integer> penalties = new HashMap<Pentalty, Integer>();
-	private int switchScoreMod = 0;
-	private int scaleScoreMod = 0;
+	private int switchScoreMod = 1;
+	private int scaleScoreMod = 1;
 	private int score = 0;
+	private int boostLevel = 0;
+	private int forceLevel = 0;
+	private int levitateLevel = 0;
 	private boolean usedLevitate = false;
+	private Vault vault;
 
-	public TeamProperties(Switch teamSwitch, GameObject exchangeSensor) {
-		this.teamSwitch = teamSwitch;
-		this.exchangeSensor = exchangeSensor;
-		
+	public TeamProperties() {
 		penalties.put(Pentalty.FOUL, 0);
 		penalties.put(Pentalty.TECH_FOUL, 0);
 	}
 
+	public void setSwitch(Switch teamSwitch) {
+		this.teamSwitch = teamSwitch;
+	}
+	
 	public Switch getSwitch() {
 		return teamSwitch;
 	}
 
+	public void setExchangeSensor(GameObject exchangeSensor) {
+		this.exchangeSensor = exchangeSensor;
+	}
+	
 	public GameObject getExchangeSensor() {
 		return exchangeSensor;
 	}
@@ -34,14 +46,16 @@ public class TeamProperties {
 
 	public void setCubeStorage(int cubeStorage) {
 		this.cubeStorage = cubeStorage;
+		
+		Game.getWorld().updateCubeStorage();
 	}
 	
 	public void addCubeStorage(int cubeStorage) {
-		this.cubeStorage += cubeStorage;
+		setCubeStorage(this.cubeStorage + cubeStorage);
 	}
 	
 	public void removeCubeStorage(int cubeStorage) {
-		this.cubeStorage = Math.max(0, cubeStorage);
+		setCubeStorage(Math.max(0, this.cubeStorage - cubeStorage));
 	}
 	
 	public HashMap<Pentalty, Integer> getPenalties() {
@@ -94,5 +108,37 @@ public class TeamProperties {
 
 	public void setUsedLevitate(boolean usedLevitate) {
 		this.usedLevitate = usedLevitate;
+	}
+
+	public int getBoostLevel() {
+		return boostLevel;
+	}
+
+	public void setBoostLevel(int boostLevel) {
+		this.boostLevel = boostLevel;
+	}
+
+	public int getForceLevel() {
+		return forceLevel;
+	}
+
+	public void setForceLevel(int forceLevel) {
+		this.forceLevel = forceLevel;
+	}
+
+	public int getLevitateLevel() {
+		return levitateLevel;
+	}
+
+	public void setLevitateLevel(int levitateLevel) {
+		this.levitateLevel = levitateLevel;
+	}
+	
+	public Vault getVault() {
+		return vault;
+	}
+
+	public void setVault(Vault vault) {
+		this.vault = vault;
 	}
 }

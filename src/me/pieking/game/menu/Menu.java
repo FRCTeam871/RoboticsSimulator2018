@@ -35,7 +35,7 @@ public abstract class Menu {
 		g.fillRect(0, 0, Game.getWidth(), Game.getHeight());
 		render(g);
 		
-		Vars.showCollision = true;
+//		Vars.showCollision = true;
 		
 		if(Vars.showCollision && isFocused()){
     		for(EButton b : buttons){
@@ -66,7 +66,7 @@ public abstract class Menu {
 	
 	public final void iTick(){
 		tick();
-
+		
 		if(isFocused()){
     		for(int i = 0; i < buttons.size(); i++){
     			EButton b = buttons.get(i);

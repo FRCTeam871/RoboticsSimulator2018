@@ -1,7 +1,5 @@
 package me.pieking.game;
 
-import me.pieking.game.Game;
-
 public class Scheduler {
 
 	public static void delayedTask(Runnable r, int ticks){

@@ -9,7 +9,6 @@ import java.util.List;
 
 import javax.swing.SwingUtilities;
 
-import me.pieking.game.Game;
 import me.pieking.game.world.GameObject;
 
 public class MouseHandler implements MouseListener, MouseWheelListener{
@@ -74,8 +73,6 @@ public class MouseHandler implements MouseListener, MouseWheelListener{
 	@Override
 	public void mouseWheelMoved(MouseWheelEvent e) {
 		double nz = GameObject.ZOOM_SCALE - e.getWheelRotation() * (GameObject.SCALE/10);
-		
-//		System.out.println(GameObject.ZOOM_SCALE);
 		
 		GameObject.ZOOM_SCALE = Math.max(-50, Math.min(nz, 64));
 	}

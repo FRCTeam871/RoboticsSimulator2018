@@ -1,12 +1,7 @@
 package me.pieking.game.gfx;
 
-import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Graphics2D;
-import java.awt.Shape;
-import java.awt.geom.AffineTransform;
-import java.awt.geom.Rectangle2D;
-import java.awt.geom.Rectangle2D.Float;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,6 +17,9 @@ public class Render {
 		Graphics2D g = d.getRenderGraphics();
 		
 		g.clearRect(0, 0, d.getWidth(), d.getHeight());
+		
+		g.setColor(Color.DARK_GRAY);
+		g.fillRect(0, 0, d.getWidth(), d.getHeight());
 		
 		g.setColor(Color.GREEN);
 		g.drawRect((int) (100 + Math.sin(Game.getTime()/10f) * 10), (int) (100 + Math.cos(Game.getTime()/10f) * 10), 20, 20);

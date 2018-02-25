@@ -1,31 +1,36 @@
 package me.pieking.game;
 
+import java.awt.AWTException;
+import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.MouseInfo;
 import java.awt.Point;
+import java.awt.Toolkit;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.InputEvent;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.lang.reflect.InvocationTargetException;
-import java.nio.file.Files;
+import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Scanner;
 
-import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
-import javax.swing.UIManager;
-import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.swing.Timer;
 
-import com.sun.javafx.geom.Rectangle;
+import org.json.JSONObject;
+
+import com.studiohartman.jamepad.ControllerManager;
+import com.studiohartman.jamepad.ControllerState;
+import com.studiohartman.jamepad.ControllerUnpluggedException;
 
 import me.pieking.game.events.KeyHandler;
 import me.pieking.game.events.MouseHandler;
 import me.pieking.game.gfx.Disp;
 import me.pieking.game.gfx.Fonts;
 import me.pieking.game.gfx.Render;
-import me.pieking.game.gfx.ShipFileAccessory;
-import me.pieking.game.gfx.ShipFileView;
 import me.pieking.game.menu.Menu;
 import me.pieking.game.net.ClientStarter;
 import me.pieking.game.net.ServerStarter;
@@ -34,25 +39,26 @@ import me.pieking.game.net.packet.LeavePacket;
 import me.pieking.game.net.packet.Packet;
 import me.pieking.game.net.packet.ShipDataPacket;
 import me.pieking.game.robot.Robot;
-import me.pieking.game.scripting.LuaTest;
+import me.pieking.game.scripting.LuaScriptLoader;
 import me.pieking.game.sound.Sound;
+import me.pieking.game.world.Balance.Team;
 import me.pieking.game.world.GameObject;
 import me.pieking.game.world.GameWorld;
 import me.pieking.game.world.Player;
-import me.pieking.game.world.Balance.Team;
+import me.pieking.game.world.PowerCube;
 
 public class Game {
 
 	/** The width of the window content, in pixels. */
-	private static final int WIDTH = 800;
+	private static int WIDTH = 800;
 	/** The height of the window content, in pixels. */
-	private static final int HEIGHT = 600;
+	private static int HEIGHT = 600;
 	
 	/** The name of the game. */
 	private static final String NAME = "Robotics Simulator 2018";
 	
 	/** Follows Semantic Versioning as per <a href="// https://semver.org/">semver.org</a>.*/
-	private static final String VERSION = "0.2.0"; 
+	private static final String VERSION = "0.2.0 - playtest"; 
 	
 	/** Whether the game is running or not. */
 	private static boolean running = false;
@@ -80,6 +86,17 @@ public class Game {
 	
 	/** The active world. */
 	private static GameWorld gw;
+	public static Gameplay gameplay;
+	
+	private static ControllerManager controllerManager;
+	private static ControllerState state;
+	private static boolean fullScreen;
+	private static JPanel jp;
+	
+	public static final boolean QUICK_CONNECT = false;
+	public static final boolean GAMEPLAY_DEBUG = true;
+	
+	public static List<Packet> packetQueue = new ArrayList<Packet>();
 	
 	/**
 	 * Run the game with arguments
@@ -154,16 +171,43 @@ public class Game {
 	 */
 	private static void init(){
 		
+		if(controllerManager == null) {
+    		controllerManager = new ControllerManager();
+    		controllerManager.initSDLGamepad();
+    		state = controllerManager.getState(0);
+		}
+		
+		if(isServer()) {
+			
+			boolean smallServer = false;
+			
+			if(smallServer) {
+    			HEIGHT = 400;
+    			GameObject.SCALE = 15.3;
+    			GameObject.DESIRED_SCALE = 15.3;
+			}else {
+				HEIGHT = 600;
+				GameObject.SCALE = 23;
+				GameObject.DESIRED_SCALE = 23;
+			}
+			
+			WIDTH = (int) (HEIGHT * 2.4625);
+			
+		}
+		
 //		try {
 //			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
 //		} catch (Exception e) {}
 		
 		// Doing this hack with the JPanel makes it so the contents of the frame are actually the right dimensions.
 		frame = new JFrame(NAME + " v" + VERSION + " | " + fps + " FPS " + tps + " TPS");
-		JPanel jp = new JPanel();
+		jp = new JPanel();
 		jp.setPreferredSize(new Dimension(WIDTH, HEIGHT));
 		frame.add(jp);
 		frame.pack();
+		
+		
+		frame.setIconImage(PowerCube.spr.getImage());
 		
 		jp.setVisible(false);
 		
@@ -184,9 +228,13 @@ public class Game {
 			
 			@Override
 			public void windowClosing(WindowEvent e) {
-				if(!isServer() && ClientStarter.clientStarter.getClient().isConnected()){
-    				LeavePacket pack = new LeavePacket(gw.getSelfPlayer().name);
-    				sendPacket(pack);
+				try{
+    				if(!isServer() && ClientStarter.clientStarter.getClient().isConnected()){
+        				LeavePacket pack = new LeavePacket(gw.getSelfPlayer().name);
+        				sendPacket(pack);
+    				}
+				}catch(Exception e2){
+					e2.printStackTrace();
 				}
 				
 				System.exit(0);
@@ -208,13 +256,15 @@ public class Game {
 		
 		frame.setVisible(true);
 		
-		LuaTest.init();
+		LuaScriptLoader.init();
 		Sound.init();
 		Fonts.init();
+		Settings.loadConfig();
 		
 		gw = new GameWorld();
+		gameplay = new Gameplay();
 		
-		while(!ClientStarter.hasEnteredIp){
+		while(!ClientStarter.hasEnteredIp && !isServer()){
 			try {
 				Thread.sleep(100);
 			}catch (InterruptedException e1) {
@@ -226,9 +276,24 @@ public class Game {
 			ClientStarter.clientStarter.getClient().connect();
 			if (ClientStarter.clientStarter.getClient().isConnected()) {
 				System.out.println("Connected to the server.");
-				JoinPacket pack = new JoinPacket("Player " + System.currentTimeMillis(), "1", "1");
+//				String username = JOptionPane.showInputDialog(frame, "Enter a username:");
+				int teamNum = Rand.range(1, 8000);
+				String username = "Team " + teamNum;
+				
+				// data can be polled from https://www.thebluealliance.com/api/v3/team/frc####?X-TBA-Auth-Key=****
+				JoinPacket pack = new JoinPacket(username, "1", "1", getVersion());
 				Game.doPacket(pack);
 				Game.getWorld().setSelfPlayer(pack.getCreated());
+				
+				try {
+					System.out.println("Polling TBA for team " + teamNum + " ...");
+					JSONObject json = Utils.getTeamInfo(teamNum);
+					System.out.println("Got response:");
+					System.out.println(json.toString(2));
+					if(!json.has("Errors")) gw.getSelfPlayer().setTeamInfo(json);
+				}catch(Exception e) {
+					e.printStackTrace();
+				}
 				
 				Robot s = gw.getSelfPlayer().selectShip();
 			    
@@ -240,7 +305,11 @@ public class Game {
 				}
 				
 			} else {
-				gw.setSelfPlayer(new Player("Player 1", 900f / GameObject.SCALE * GameWorld.FIELD_SCALE, 500f / GameObject.SCALE * GameWorld.FIELD_SCALE, Team.RED));
+				
+				int teamNum = Rand.range(1, 8000);
+				String username = "Team " + teamNum;
+				
+				gw.setSelfPlayer(new Player(username, 900f / GameObject.SCALE * GameWorld.FIELD_SCALE, 500f / GameObject.SCALE * GameWorld.FIELD_SCALE, Team.RED));
 
 				Robot s = gw.getSelfPlayer().selectShip();
 				gw.getSelfPlayer().loadShip(s);
@@ -259,14 +328,27 @@ public class Game {
 	private static void tick(){
 		
 		frame.setTitle(NAME + (isServer() ? " (Server) " : "") + " v" + VERSION + " | " + fps + " FPS " + tps + " TPS");
+
+		List<Packet> pack = new ArrayList<Packet>();
+		pack.addAll(packetQueue);
+//		System.out.println("packets: " + packetQueue.size());
+//		long start = System.currentTimeMillis();
+		for(Packet p : pack) {
+			if(p != null) p.doAction();
+		}
+		packetQueue.clear();
+//		System.out.println("took " + (System.currentTimeMillis()-start) + "ms");
+		
+		state = controllerManager.getState(0);
 		
 		try{
+			gameplay.tick();
 			gw.tick();
 		}catch(Exception e){
 			e.printStackTrace();
 		}
 		
-		if(!isServer()){
+//		if(!isServer()){
 			Point p = disp.getMousePositionScaled();
     		if(p != null) keyHandler.lastMousePos = p;
     		
@@ -275,7 +357,8 @@ public class Game {
     			Menu m = menus.get(i);
     			m.iTick();
     		}
-		}
+    		
+//		}
 		
 		time++;
 	}
@@ -375,7 +458,7 @@ public class Game {
 	 * @param pack - the {@link Packet} to process
 	 */
 	public static void doPacket(Packet pack){
-		if(!isServer()) ClientStarter.clientStarter.writePacket(pack);
+		sendPacket(pack);
 		pack.doAction();
 	}
 	
@@ -401,6 +484,134 @@ public class Game {
 	 */
 	public static boolean debug() {
 		return false;
+	}
+	
+	public static ControllerState controllerState() {
+		if(controllerManager == null) {
+			return null;
+		}
+		
+		return state;
+	}
+	
+	public static void setVibration(float r, float l) {
+		try {
+			controllerManager.getControllerIndex(0).startVibration(l, r);
+		} catch (ControllerUnpluggedException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public static boolean isConnected() {
+		if(ClientStarter.clientStarter == null || ClientStarter.clientStarter.getClient() == null) return false;
+		return ClientStarter.clientStarter.getClient().isConnected();
+	}
+	
+	public static void toggleFullScreen(){
+		
+		JFrame newFrame = new JFrame(NAME + " " + VERSION);
+		
+		if(!fullScreen){
+			newFrame.setExtendedState(JFrame.MAXIMIZED_BOTH);
+			newFrame.setUndecorated(true);
+		}else{
+			//newFrame.setExtendedState(JFrame.NORMAL);
+			newFrame.setUndecorated(false);
+		}
+		
+		jp = new JPanel();
+		jp.setPreferredSize(new Dimension(WIDTH - 10, HEIGHT - 10));
+		newFrame.getContentPane().add(jp);
+		newFrame.getContentPane().setBackground(Color.BLACK);
+		newFrame.pack();
+		jp.setVisible(false);
+		newFrame.setVisible(true);
+		newFrame.setLocationRelativeTo(null);
+		newFrame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+		newFrame.setTitle(Game.NAME);
+		newFrame.add(disp);
+		newFrame.setLayout(null);
+		newFrame.addWindowListener(new WindowListener() {
+			@Override
+			public void windowOpened(WindowEvent e) {}
+			@Override
+			public void windowIconified(WindowEvent e) {}
+			@Override
+			public void windowDeiconified(WindowEvent e) {}
+			@Override
+			public void windowDeactivated(WindowEvent e) {}
+			@Override
+			public void windowClosed(WindowEvent e) {}
+			@Override
+			public void windowActivated(WindowEvent e) {}
+			
+			@Override
+			public void windowClosing(WindowEvent e) {
+				try{
+    				if(!isServer() && ClientStarter.clientStarter.getClient().isConnected()){
+        				LeavePacket pack = new LeavePacket(gw.getSelfPlayer().name);
+        				sendPacket(pack);
+    				}
+				}catch(Exception e2){
+					e2.printStackTrace();
+				}
+				
+				System.exit(0);
+			}
+		});
+		newFrame.setResizable(false);
+		
+		newFrame.setIconImage(PowerCube.spr.getImage());
+		
+		if(!fullScreen) {
+			
+			int dheight = (int) (newFrame.getHeight());
+			int dwidth = (int) (dheight * ((float)WIDTH / (float)HEIGHT));
+			
+			//System.out.println(disp.rwidth + " " + dwidth );
+			
+			disp.setBounds((newFrame.getWidth() / 2) - (dwidth / 2), 0, dwidth, dheight);
+			disp.realHeight = dheight + 2;
+			disp.realWidth = dwidth + 2;
+			
+		}else{
+			disp.realHeight = HEIGHT + 1;
+			disp.realWidth = WIDTH + 1;
+			disp.setBounds(0, 0, WIDTH, HEIGHT);
+		}
+		
+		frame.dispose();
+		
+		frame = newFrame;
+		
+//		game.setHideCursor(hideCursor);
+		
+		fullScreen = !fullScreen;
+		
+		java.awt.Robot r;
+		try {
+			
+			r = new java.awt.Robot();
+			
+			Timer t = new Timer(200, new ActionListener() {
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					int x = (int) MouseInfo.getPointerInfo().getLocation().getX();
+					int y = (int) MouseInfo.getPointerInfo().getLocation().getY();
+					r.mouseMove(Toolkit.getDefaultToolkit().getScreenSize().width/2, Toolkit.getDefaultToolkit().getScreenSize().height/2);
+					r.mousePress(InputEvent.BUTTON1_DOWN_MASK);
+					r.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
+					r.mouseMove(x, y);
+				}
+			});
+			t.setRepeats(false);
+			t.start();
+			
+		} catch (AWTException e1) {}
+	}
+
+	public static void queuePacket(Packet p) {
+		packetQueue.add(p);
 	}
 	
 }

@@ -96,6 +96,8 @@ public class Sprite {
 			alpha = 0;
 		}
 		
+		if(alpha == 1f) return getImage();
+		
 		BufferedImage orig = Images.toBufferedImage(getImage());
 		
 		BufferedImage resizedImage = new BufferedImage(orig.getWidth(), orig.getHeight(), BufferedImage.TYPE_INT_ARGB);

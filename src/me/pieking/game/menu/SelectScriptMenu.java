@@ -10,14 +10,16 @@ import java.awt.font.GlyphVector;
 import java.awt.geom.AffineTransform;
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
+
+import com.studiohartman.jamepad.ControllerState;
 
 import me.pieking.game.FileSystem;
 import me.pieking.game.Game;
 import me.pieking.game.gfx.Fonts;
+import me.pieking.game.robot.Robot;
 import me.pieking.game.robot.component.ComputerComponent;
-import me.pieking.game.scripting.LuaTest;
+import me.pieking.game.scripting.LuaScriptLoader;
 
 public class SelectScriptMenu extends Menu {
 
@@ -28,14 +30,14 @@ protected List<EToggle> toggles = new ArrayList<EToggle>();
 	String selected;
 	Point hover = new Point(0, 0);
 
-	ComputerComponent comp;
+	Robot robot;
 	
 	private boolean wasLeftPressed = true;
 	
-	public SelectScriptMenu(ComputerComponent comp) {
+	public SelectScriptMenu(Robot robot) {
 		super(new Color(0, 0, 0, 0));
 		avail = getAvailableScripts();
-		this.comp = comp;
+		this.robot = robot;
 	}
 	
 	private List<String> getAvailableScripts() {
@@ -100,7 +102,8 @@ protected List<EToggle> toggles = new ArrayList<EToggle>();
 		g.setTransform(trans);
 		
 		selected = null;
-		hover = new Point(-1, -1);
+		if(!Game.controllerState().isConnected) hover = new Point(-1, -1);
+//		System.out.println(hover);
 		for(int x = 0; x < gridW; x++){
 			for(int y = 0; y < gridH; y++){
 				
@@ -109,9 +112,14 @@ protected List<EToggle> toggles = new ArrayList<EToggle>();
 				Rectangle r = new Rectangle(x * (gridSizeW + gridPadding) + mx + boxPadding, y * (gridSizeH + gridPadding) + my + boxPadding + titleHeight, gridSizeW, gridSizeH);
 				
 				boolean hover = r.contains(Game.mouseLoc());
+				
+				if(Game.controllerState().isConnected) {
+					hover = this.hover.y == index;
+				}
+				
 				if(index > 0 && index <= avail.size()){
 					
-					if(comp.script != null && avail.get(index-1).equals(comp.script.name)){
+					if(robot.getAutonScript() != null && avail.get(index-1).equals(robot.getAutonScript().name)){
 						if(hover){
 							g.setColor(new Color(0.4f, 0.6f, 0.4f, 0.5f));
 						}else{
@@ -254,41 +262,51 @@ protected List<EToggle> toggles = new ArrayList<EToggle>();
 	protected void tick() {
 		boolean nowLeftPressed = Game.mouseHandler().isLeftPressed();
 		
+		ControllerState cont = Game.controllerState();
+		if(cont.isConnected) {
+			if(cont.a) nowLeftPressed = true;
+		}
+		
 		if(nowLeftPressed && !wasLeftPressed){
 			if(selected != null){
 				System.out.println("selected: " + selected);
 				if(selected.equals("None")){
-					comp.script = null;
+					robot.setAutonScript(null);
 				}else{
-					comp.script = LuaTest.runScript(selected);
+					robot.setAutonScript(LuaScriptLoader.runScript(selected));
 				}
-//				KeyListener kl = new KeyListener() {
-//					@Override
-//					public void keyTyped(KeyEvent e) {
-//						
-//					}
-//					
-//					@Override
-//					public void keyReleased(KeyEvent e) {
-//						
-//					}
-//					
-//					@Override
-//					public void keyPressed(KeyEvent e) {
-//						System.out.println(e.getKeyCode());
-//						if(!keys.contains(e.getKeyCode()) && e.getKeyCode() != KeyEvent.VK_ESCAPE) keys.add(e.getKeyCode());
-//						waitKeyPress = false;
-//						Game.getDisp().removeKeyListener(this);
-//					}
-//				};
-//				Game.getDisp().addKeyListener(kl);
-			}else{
-//				comp.script = LuaTest.runScript(selected);
+			
 				close();
 			}
 		}
 		
-		wasLeftPressed  = nowLeftPressed;
+		wasLeftPressed = nowLeftPressed;
+		
+		
+		if(cont.isConnected) {
+			if(cont.dpadDownJustPressed) {
+				if(hover.x == -1) {
+					hover = new Point(0, 0);
+				}else {
+					int newHover = hover.y + 1;
+					if(newHover < 0) newHover += avail.size()+1;
+					if(newHover > avail.size()) newHover -= avail.size()+1;
+					System.out.println(newHover);
+					hover = new Point(0, newHover);
+				}
+			}else if(cont.dpadUpJustPressed) {
+				if(hover.x == -1) {
+					hover = new Point(0, 0);
+				}else {
+					int newHover = hover.y - 1;
+					if(newHover < 0) newHover += avail.size()+1;
+					if(newHover > avail.size()) newHover -= avail.size()+1;
+					System.out.println(newHover);
+					hover = new Point(0, newHover);
+				}
+			}
+		}
+		
 	}
 
 	@Override

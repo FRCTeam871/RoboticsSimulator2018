@@ -237,15 +237,6 @@ public class ComponentInfoMenu extends Menu {
 			});
 		}
 		
-		if(comp instanceof ComputerComponent){
-			editScript = addButton(new Rectangle(0, 0, 24, 16), new Runnable() {
-				public void run() {
-					SelectScriptMenu ssm = new SelectScriptMenu((ComputerComponent) comp);
-					Render.showMenu(ssm);
-				}
-			});
-		}
-		
 //		
 //		if(Game.debug()){
 //    		addButton(new Rectangle(0, 0, 5, 5), new Runnable() {

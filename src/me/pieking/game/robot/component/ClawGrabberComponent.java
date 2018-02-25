@@ -2,9 +2,9 @@ package me.pieking.game.robot.component;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
-import java.awt.Point;
 
 import org.dyn4j.dynamics.BodyFixture;
+import org.dyn4j.dynamics.joint.WeldJoint;
 import org.dyn4j.geometry.AABB;
 import org.dyn4j.geometry.Mass;
 import org.dyn4j.geometry.MassType;
@@ -12,13 +12,12 @@ import org.dyn4j.geometry.Rectangle;
 import org.dyn4j.geometry.Transform;
 import org.dyn4j.geometry.Vector2;
 
-import com.sun.org.apache.bcel.internal.generic.NEWARRAY;
-import com.sun.swing.internal.plaf.basic.resources.basic;
-
 import me.pieking.game.Game;
-import me.pieking.game.gfx.AnimatedImage;
 import me.pieking.game.gfx.Sprite;
 import me.pieking.game.gfx.Spritesheet;
+import me.pieking.game.net.packet.AddCubePacket;
+import me.pieking.game.net.packet.DropCubePacket;
+import me.pieking.game.net.packet.PickupCubePacket;
 import me.pieking.game.world.GameObject;
 import me.pieking.game.world.GameObjectFilter;
 import me.pieking.game.world.GameObjectFilter.FilterType;
@@ -41,17 +40,22 @@ public class ClawGrabberComponent extends ActivatableComponent {
 	
 	double holdingAngle;
 	
+	boolean setCube = false;
+	
+	WeldJoint weld = null;
+	PowerCube cube = null;
+	
+	FilterType lastFilter = null;
+	
 	public ClawGrabberComponent(int x, int y, int rot) {
 		super(x, y, 2, 1, rot, 100);
 		sprite = sprOff;
+		toggleMode = true;
 	}
 	
 	@Override
 	public GameObject createBody(Player player){
 		this.pl = player; 
-		
-		float xSize = unitSize * 2;
-		float ySize = unitSize;
 		
 		GameObject base = new GameObject();
 		base.setAutoSleepingEnabled(false);
@@ -61,18 +65,21 @@ public class ClawGrabberComponent extends ActivatableComponent {
 		r.translate(unitSize/2, unitSize/2);
 		BodyFixture bf = new BodyFixture(r);
 		bf.setFilter(new PlayerFilter(pl));
+//		bf.setDensity(0.01);
 		base.addFixture(bf);
 		
 		r = new Rectangle(unitSize / 8, unitSize * .75);
 		r.translate(-unitSize/2, unitSize / 8);
 		bf = new BodyFixture(r);
 		bf.setFilter(new PlayerFilter(pl));
+//		bf.setDensity(0.01);
 		base.addFixture(bf);
 		
 		r = new Rectangle(unitSize / 8, unitSize * .75);
 		r.translate(unitSize/2 + unitSize, unitSize / 8);
 		bf = new BodyFixture(r);
 		bf.setFilter(new PlayerFilter(pl));
+//		bf.setDensity(0.01);
 		base.addFixture(bf);
 		
 		base.setMass(new Mass(base.getMass().getCenter(), 0, 0));
@@ -88,8 +95,10 @@ public class ClawGrabberComponent extends ActivatableComponent {
 	public void tick(Player pl) {
 		super.tick(pl);
 		
+//		System.out.println(activated);
+		
 		if(activated){
-			
+			updateCollision();
 		}else{
 			double nearestPlatform = Double.MAX_VALUE;
 			
@@ -137,26 +146,34 @@ public class ClawGrabberComponent extends ActivatableComponent {
 		super.activate();
 		sprite = sprOn;
 		
-		for(PowerCube c : Game.getWorld().getCubes()){
-			if(!Game.getWorld().isCubeOnScale(c)) {
-				if(c.base.getWorldCenter().distance(lastBody.getWorldCenter()) < unitSize * 1.3){
-					
-					double myAngle = Math.toDegrees(lastBody.getTransform().getRotation());
-					
-					for(int angleOfs = -360; angleOfs < 360; angleOfs += 90){
-    					double cubeAngle = Math.toDegrees(c.base.getTransform().getRotation()) + angleOfs;
-    					cubeAngle = cubeAngle % 360;
-    					
-    					System.out.println(myAngle + " " + cubeAngle);
-    					if(Math.abs(myAngle - cubeAngle) <= 10){
-    						holdingAngle = angleOfs;
-        					Game.getWorld().removeCube(c);
-        					setHasCube(true);
-        					break;
-    					}
-					}
-				}
-			}
+		Player p = Game.getWorld().getPlayer(this);
+		if(p == Game.getWorld().getSelfPlayer()) {
+			if(p.getHeight() < 0.1) {
+        		for(PowerCube c : Game.getWorld().getCubes()){
+        			if(!Game.getWorld().isCubeOnScale(c)) {
+        				if(c.base.getWorldCenter().distance(lastBody.getWorldCenter()) < unitSize * 1.3){
+        					
+        					double myAngle = Math.toDegrees(lastBody.getTransform().getRotation());
+        					
+        					for(int angleOfs = -360; angleOfs < 360; angleOfs += 90){
+            					double cubeAngle = Math.toDegrees(c.base.getTransform().getRotation()) + angleOfs;
+            					cubeAngle = cubeAngle % 360;
+            					
+        //    					System.out.println(myAngle + " " + cubeAngle);
+            					if(Math.abs(myAngle - cubeAngle) <= 10){
+            						
+            						PickupCubePacket pcp = new PickupCubePacket(c.getId() + "", p.name, angleOfs + "");
+            						Game.sendPacket(pcp);
+            						
+            						grabCube(c, angleOfs);
+            						
+                					break;
+            					}
+        					}
+        				}
+        			}
+        		}
+    		}
 		}
 		
 //		setHasCube(true);
@@ -168,10 +185,11 @@ public class ClawGrabberComponent extends ActivatableComponent {
 		sprite = sprOff;
 		
 		if(hasCube){
-			Transform tra = lastBody.getTransform().copy();
-			double r = tra.getRotation() - Math.toRadians(90);
-			dummyCube.base.applyForce(new Vector2(unitSize * Math.cos(r), unitSize * Math.sin(r)).multiply(500));
-			Game.getWorld().addPowerCube(dummyCube);
+			Player p = Game.getWorld().getPlayer(this);
+			if(p == Game.getWorld().getSelfPlayer()) {
+				DropCubePacket dcp = new DropCubePacket(p.name);
+				Game.sendPacket(dcp);
+			}
 			setHasCube(false);
 		}
 		
@@ -182,45 +200,64 @@ public class ClawGrabberComponent extends ActivatableComponent {
 	}
 	
 	public void setHasCube(boolean cube){
+//		System.out.println("setHasCube(" + cube + ");");
 		this.hasCube = cube;
+		if(!cube) {
+			if(weld != null) {
+				Game.getWorld().getWorld().removeJoint(weld);
+//				System.out.println(weld);
+			}
+			
+//			Transform tra = lastBody.getTransform().copy();
+//			double r = tra.getRotation() - Math.toRadians(90);
+//			dummyCube.base.getFixture(0).setFilter(new GameObjectFilter(FilterType.POWER_CUBE));
+//			dummyCube.base.applyForce(new Vector2(unitSize * Math.cos(r), unitSize * Math.sin(r)).multiply(500));
+//			Game.getWorld().addPowerCube(dummyCube);
+			if(this.cube != null) {
+//				System.out.println("drop cube");
+				this.cube.base.shouldRender = true;
+				this.cube.holding = false;
+    			Transform tra = lastBody.getTransform().copy();
+    			double r = tra.getRotation() - Math.toRadians(90);
+    			this.cube.base.getFixture(0).setFilter(new GameObjectFilter(FilterType.POWER_CUBE));
+    			this.cube.base.applyForce(new Vector2(unitSize * Math.cos(r), unitSize * Math.sin(r)).multiply(200));
+//    			this.cube.base.setMass(MassType.NORMAL);
+//    			Game.getWorld().addPowerCube(this.cube);
+			}
+			
+		}
 		updateCollision();
 	}
 	
 	public void updateCollision(){
-		lastBody.removeAllFixtures();
-		if(hasCube){
-			Rectangle r = new Rectangle(unitSize * 2, unitSize / 8);
-			r.translate(unitSize/2, unitSize/2);
-			BodyFixture bf = new BodyFixture(r);
-			bf.setFilter(new PlayerFilter(pl));
-			lastBody.addFixture(bf);
+//		System.out.println("upd");
+		
+		if(hasCube && cube != null){
 			
-//			r = new Rectangle(unitSize / 8, unitSize * .75);
-//			r.translate(-unitSize/2, unitSize / 8);
-//			bf = new BodyFixture(r);
-//			bf.setFilter(new PlayerFilter(pl));
-//			lastBody.addFixture(bf);
-//			
-//			r = new Rectangle(unitSize / 8, unitSize * .75);
-//			r.translate(unitSize/2 + unitSize, unitSize / 8);
-//			bf = new BodyFixture(r);
-//			bf.setFilter(new PlayerFilter(pl));
-//			lastBody.addFixture(bf);
+			double height = pl.getHeight();
+			FilterType type = FilterType.POWER_CUBE_HOLDING_GROUND;
 			
-			Rectangle r2 = new Rectangle((unitSize * 2) * 0.8, (unitSize * 2) * 0.8);
-			r2.translate(unitSize/2, unitSize/2 - unitSize);
-			BodyFixture bf2 = new BodyFixture(r2);
-			bf2.setFilter(new GameObjectFilter(FilterType.POWER_CUBE_HOLDING));
-			lastBody.addFixture(bf2);
+			if(height > 0.9) {
+				type = FilterType.POWER_CUBE_HOLDING_HIGH;
+			}else if(height > 0.2) {
+				type =FilterType.POWER_CUBE_HOLDING_LOW;
+			}else {
+				type = FilterType.POWER_CUBE_HOLDING_GROUND;
+			}
 			
-		}else{
-			Rectangle r = new Rectangle(unitSize * 2, unitSize / 8);
-			r.translate(unitSize/2, unitSize/2);
-			BodyFixture bf = new BodyFixture(r);
-			bf.setFilter(new PlayerFilter(pl));
-			lastBody.addFixture(bf);
+			if(type != lastFilter) {
+				
+				lastFilter = type;
+				
+				lastBody.removeAllFixtures();
 			
-			if(!closeToPlatform){
+    			Rectangle r = new Rectangle(unitSize * 2, unitSize / 8);
+    			r.translate(unitSize/2, unitSize/2);
+    			BodyFixture bf = new BodyFixture(r);
+    			bf.setFilter(new PlayerFilter(pl));
+    //			bf.setDensity(0.01);
+    			lastBody.addFixture(bf);
+    			
     			r = new Rectangle(unitSize / 8, unitSize * .75);
     			r.translate(-unitSize/2, unitSize / 8);
     			bf = new BodyFixture(r);
@@ -231,6 +268,43 @@ public class ClawGrabberComponent extends ActivatableComponent {
     			r.translate(unitSize/2 + unitSize, unitSize / 8);
     			bf = new BodyFixture(r);
     			bf.setFilter(new PlayerFilter(pl));
+    			lastBody.addFixture(bf);
+    			
+    			Rectangle r2 = new Rectangle((unitSize * 2) * 0.8, (unitSize * 2) * 0.8);
+    			r2.translate(unitSize/2, unitSize/2 - unitSize);
+    			BodyFixture bf2 = new BodyFixture(r2);
+    			bf2.setFilter(new GameObjectFilter(type));
+    			
+    //			WeldJoint wj = new WeldJoint(lastBody, dummyCube.base, lastBody.getLocalCenter());
+    			
+    			if(cube != null) cube.base.getFixture(0).setFilter(bf2.getFilter());
+			
+			}
+//			lastBody.addFixture(bf2);
+			
+		}else{
+			lastBody.removeAllFixtures();
+			
+			Rectangle r = new Rectangle(unitSize * 2, unitSize / 8);
+			r.translate(unitSize/2, unitSize/2);
+			BodyFixture bf = new BodyFixture(r);
+			bf.setFilter(new PlayerFilter(pl));
+//			bf.setDensity(0.01);
+			lastBody.addFixture(bf);
+			
+			if(!closeToPlatform){
+    			r = new Rectangle(unitSize / 8, unitSize * .75);
+    			r.translate(-unitSize/2, unitSize / 8);
+    			bf = new BodyFixture(r);
+    			bf.setFilter(new PlayerFilter(pl));
+//    			bf.setDensity(0.01);
+    			lastBody.addFixture(bf);
+    			
+    			r = new Rectangle(unitSize / 8, unitSize * .75);
+    			r.translate(unitSize/2 + unitSize, unitSize / 8);
+    			bf = new BodyFixture(r);
+    			bf.setFilter(new PlayerFilter(pl));
+//    			bf.setDensity(0.01);
     			lastBody.addFixture(bf);
 			}
 		}
@@ -246,9 +320,27 @@ public class ClawGrabberComponent extends ActivatableComponent {
 			tra.translate(unitSize * Math.cos(r), unitSize * Math.sin(r));
 			dummyCube.base.setTransform(tra);
 			dummyCube.base.rotate(-Math.toRadians(holdingAngle), dummyCube.base.getWorldCenter());
+			
+			if(cube != null) cube.base.setTransform(dummyCube.base.getTransform());
 			dummyCube.render(g);
+			
+//			cube.render(g);
 		}
 		
+	}
+
+	public void grabCube(PowerCube c, double rot) {
+//		System.out.println("grab: " + c.getId());
+		cube = c;
+		cube.base.setMass(new Mass(cube.base.getLocalCenter(), 0.1, 0.1));
+		cube.base.shouldRender = false;
+		cube.holding = true;
+//		Game.getWorld().removeCube(cube);
+		holdingAngle = rot;
+//		weld = new WeldJoint(lastBody, c.base, lastBody.getLocalCenter());
+//		Game.getWorld().getWorld().addJoint(weld);
+		
+		setHasCube(true);
 	}
 
 }

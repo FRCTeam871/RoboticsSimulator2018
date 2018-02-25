@@ -40,7 +40,7 @@ public class ScalePlatform {
 	double ledYofs = 0;
 	double ledXofs = 0;
 	
-	public ScalePlatform(double x, double y, double sizeW, double sizeH, LEDStrip ledStrip) {
+	public ScalePlatform(double x, double y, double sizeW, double sizeH, LEDStrip ledStrip, boolean scale) {
 		
 		this.x = x;
 		this.y = y;
@@ -64,21 +64,21 @@ public class ScalePlatform {
 		Rectangle r = new Rectangle(Component.unitSize * sizeW, Component.unitSize * sizeH);
 		r.translate(Component.unitSize * (sizeW/2 - 0.5), Component.unitSize * (sizeH/2 - 0.5));
 		BodyFixture bf = new BodyFixture(r);
-		bf.setFilter(new GameObjectFilter(FilterType.DEFAULT));
+		bf.setFilter(new GameObjectFilter(scale ? FilterType.SCALE_PLATFORM_CENTER : FilterType.SWITCH_PLATFORM_CENTER));
 		base.setMass(MassType.INFINITE);
 		base.addFixture(bf);
 		
 		r = new Rectangle(Component.unitSize * sizeW, Component.unitSize * 0.25);
 		r.translate(Component.unitSize * (sizeW/2 - 0.5), Component.unitSize * (sizeH/2 - 0.5) - (Component.unitSize * sizeH) + (Component.unitSize * (sizeH/2 - 0.5)) + Component.unitSize*0.625);
 		bf = new BodyFixture(r);
-		bf.setFilter(new GameObjectFilter(FilterType.SCALE_PLATFORM));
+		bf.setFilter(new GameObjectFilter(scale ? FilterType.SCALE_PLATFORM : FilterType.SWITCH_PLATFORM));
 		base.setMass(MassType.INFINITE);
 		base.addFixture(bf);
 		
 		r = new Rectangle(Component.unitSize * sizeW, Component.unitSize * 0.25);
 		r.translate(Component.unitSize * (sizeW/2 - 0.5), Component.unitSize * (sizeH/2 - 0.5) + (Component.unitSize * sizeH) - (Component.unitSize * (sizeH/2 - 0.5)) - Component.unitSize*0.625);
 		bf = new BodyFixture(r);
-		bf.setFilter(new GameObjectFilter(FilterType.SCALE_PLATFORM));
+		bf.setFilter(new GameObjectFilter(scale ? FilterType.SCALE_PLATFORM : FilterType.SWITCH_PLATFORM));
 		base.setMass(MassType.INFINITE);
 		base.addFixture(bf);
 		
@@ -86,7 +86,7 @@ public class ScalePlatform {
 		r.translate(Component.unitSize * (sizeW/2 - 0.5) - (Component.unitSize * sizeW/2), Component.unitSize * (sizeH/2 - 0.5) + (Component.unitSize * sizeH) - (Component.unitSize * (sizeH/2 - 0.5)) - Component.unitSize*0.625 - (Component.unitSize * sizeH/2) + (Component.unitSize * 0.25/2));
 //		r.rotate(Math.toRadians(90), r2.getCenter());
 		bf = new BodyFixture(r);
-		bf.setFilter(new GameObjectFilter(FilterType.SCALE_PLATFORM));
+		bf.setFilter(new GameObjectFilter(scale ? FilterType.SCALE_PLATFORM : FilterType.SWITCH_PLATFORM));
 		base.setMass(MassType.INFINITE);
 		base.addFixture(bf);
 		
@@ -94,7 +94,7 @@ public class ScalePlatform {
 		r.translate(Component.unitSize * (sizeW/2 - 0.5) + (Component.unitSize * sizeW/2), Component.unitSize * (sizeH/2 - 0.5) + (Component.unitSize * sizeH) - (Component.unitSize * (sizeH/2 - 0.5)) - Component.unitSize*0.625 - (Component.unitSize * sizeH/2) + (Component.unitSize * 0.25/2));
 //		r.rotate(Math.toRadians(-90), r2.getCenter());
 		bf = new BodyFixture(r);
-		bf.setFilter(new GameObjectFilter(FilterType.SCALE_PLATFORM));
+		bf.setFilter(new GameObjectFilter(scale ? FilterType.SCALE_PLATFORM : FilterType.SWITCH_PLATFORM));
 		base.setMass(MassType.INFINITE);
 		base.addFixture(bf);
 		
@@ -103,14 +103,15 @@ public class ScalePlatform {
 		base.translate(x, y);
 	}
 
-	public ScalePlatform(double x, double y, LEDStrip ledStrip) {
-		this(x, y, 6.2, 5, ledStrip);
+	public ScalePlatform(double x, double y, LEDStrip ledStrip, boolean scale) {
+		this(x, y, 6.2, 5, ledStrip, scale);
 	}
 	
 	public int numCubes(){
 		int ct = 0;
 		List<PowerCube> cub = Game.getWorld().getCubes();
 		for(PowerCube p : cub) {
+			if(p.holding) continue; // don't count the cube if it's being held
 			if(base.contains(p.base.getWorldCenter())) {
 				ct++;
 			}

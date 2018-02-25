@@ -3,11 +3,11 @@ package me.pieking.game.net.packet;
 import me.pieking.game.Game;
 import me.pieking.game.world.Player;
 
-public class PlayerDiePacket extends Packet{
+public class VotePacket extends Packet{
 
 	String user;
 	
-	public PlayerDiePacket(String username) {
+	public VotePacket(String username) {
 		this.user = username;
 	}
 
@@ -19,9 +19,7 @@ public class PlayerDiePacket extends Packet{
 	@Override
 	public void doAction() {
 		Player p = Game.getWorld().getPlayer(user);
-		if(p != null){
-			p.die();
-		}
+		Game.gameplay.voteToStart(p);
 	}
 	
 }

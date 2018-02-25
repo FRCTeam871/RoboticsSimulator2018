@@ -26,6 +26,14 @@ public class ShipDataPacket extends Packet {
 	@Override
 	public void doAction() {
 		System.out.println(Game.getWorld().getPlayer(user));
+		
+		long start = System.currentTimeMillis();
+		while(Game.getWorld().getPlayer(user) == null && System.currentTimeMillis() - start < 1000) {
+			try {
+				Thread.sleep(100);
+			} catch (InterruptedException e) {}
+		}
+		
 		if(Game.getWorld().getPlayer(user) != null){
 			Player pl = Game.getWorld().getPlayer(user);
 			

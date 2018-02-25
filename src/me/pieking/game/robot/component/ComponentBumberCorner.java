@@ -8,10 +8,10 @@ import org.dyn4j.geometry.MassType;
 
 import me.pieking.game.gfx.Sprite;
 import me.pieking.game.gfx.Spritesheet;
+import me.pieking.game.world.Balance.Team;
 import me.pieking.game.world.GameObject;
 import me.pieking.game.world.Player;
 import me.pieking.game.world.PlayerFilter;
-import me.pieking.game.world.Balance.Team;
 
 public class ComponentBumberCorner extends Component {
 

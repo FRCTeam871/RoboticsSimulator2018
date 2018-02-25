@@ -20,9 +20,9 @@ public class GameObjectFilter implements Filter{
 				Player pl = ((PlayerFilter) f).pl;
 				if(pl != null && pl.noClip) return false;
 			}
-//			if(this.type != FilterType.FIRE){
-//				System.out.println(this.type + " collides with " + f.type + "? " + this.type.collidesWith(f.type));
-//			}
+			
+//			if(this.type == FilterType.SHIP)System.out.println(this.type + " " + f.type + " " + this.type.collidesWith(f.type));
+			
 			if(this.type.collidesWith(f.type)){
 				return true;
 			}else{
@@ -35,12 +35,17 @@ public class GameObjectFilter implements Filter{
 	}
 
 	public enum FilterType{
-		DEFAULT	(), 
-		POWER_CUBE	("SHIP", "POWER_CUBE", "SCALE_PLATFORM", "POWER_CUBE_HOLDING"),
-		POWER_CUBE_HOLDING	("SHIP", "POWER_CUBE"),
-		SHIP	("SHIP", "POWER_CUBE"),
-		PARTICLE(),
-		SCALE_PLATFORM ("SHIP", "POWER_CUBE");
+		DEFAULT						(), 
+		POWER_CUBE					("SHIP", "POWER_CUBE", "SCALE_PLATFORM", "SWITCH_PLATFORM", "POWER_CUBE_HOLDING_GROUND"),
+		POWER_CUBE_HOLDING_GROUND 	("SHIP", "POWER_CUBE", "SCALE_PLATFORM", "SWITCH_PLATFORM", "POWER_CUBE_HOLDING_GROUND"),
+		POWER_CUBE_HOLDING_LOW	  	("SHIP", "SCALE_PLATFORM"),
+		POWER_CUBE_HOLDING_HIGH	 	("SHIP"),
+		SHIP						("SHIP", "POWER_CUBE", "SCALE_PLATFORM", "SWITCH_PLATFORM"),
+		PARTICLE					(),
+		SCALE_PLATFORM_CENTER 		("SHIP", "POWER_CUBE_HOLDING_GROUND", "POWER_CUBE_HOLDING_LOW"),
+		SCALE_PLATFORM 				("SHIP", "POWER_CUBE", "POWER_CUBE_HOLDING_GROUND", "POWER_CUBE_HOLDING_LOW"),
+		SWITCH_PLATFORM_CENTER 		("SHIP", "POWER_CUBE_HOLDING_GROUND"),
+		SWITCH_PLATFORM 			("SHIP", "POWER_CUBE", "POWER_CUBE_HOLDING_GROUND");
 		
 		static {
 			for(FilterType f : values()){
@@ -65,6 +70,7 @@ public class GameObjectFilter implements Filter{
 		
 		public boolean collidesWith(FilterType f){
 			for(FilterType fi : coll){
+//				if(f == POWER_CUBE_HOLDING_GROUND) System.out.println(f + " " + fi);
 				if(fi == f){
 					return true;
 				}
