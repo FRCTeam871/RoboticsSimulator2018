@@ -67,6 +67,11 @@ protected List<EToggle> toggles = new ArrayList<EToggle>();
 		msg = Settings.cubeUpdateInterval + "t";
 		g.drawString(msg, baseX - padding + 40, baseY + (yInc * 1) + 16);
 		
+		msg = "Use WorldUpdateThread:";
+		g.drawString(msg, baseX - padding - g.getFontMetrics().stringWidth(msg), baseY + (yInc * 2) + 16);
+		msg = Settings.s_useWorldUpdateThread ? "T" : "F";
+		g.drawString(msg, baseX - padding + 16, baseY + (yInc * 2) + 16);
+		
 //		msg = "(" + Settings.nameTags.display() + ")";
 //		g.drawString(msg, baseX + 20 + padding, baseY + (yInc * 1) + 16);
 //		
@@ -168,6 +173,9 @@ protected List<EToggle> toggles = new ArrayList<EToggle>();
 			Settings.cubeUpdateInterval = Math.max(1, Math.min(Settings.cubeUpdateInterval + mod, 60));
 		});
 		
+		addButton(new Rectangle(baseX, baseY + (yInc * 2), 20, 20), () -> {
+			Settings.s_useWorldUpdateThread = !Settings.s_useWorldUpdateThread;
+		});
 //		nameTagDamage = addSwitch(new Rectangle(baseX, baseY + (yInc * 2), 20, 20), 
 //			state -> Settings.nameTagDamages = NameTagVisibility.values()[state]
 //		, 2, Settings.nameTagDamages.getCode());

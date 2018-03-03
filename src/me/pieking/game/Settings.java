@@ -15,6 +15,7 @@ public class Settings {
 	
 	public static int playerUpdateInterval = 5;
 	public static int cubeUpdateInterval = 15;
+	public static boolean s_useWorldUpdateThread = false;
 	
 	public static void load(String settings) {
 		Logger.info("Loading settings: " + settings);
@@ -71,6 +72,8 @@ public class Settings {
 				writer.newLine();
 				writer.write(cubeUpdateInterval + "");
 				writer.newLine();
+				writer.write(s_useWorldUpdateThread + "");
+				writer.newLine();
 			     
 			    writer.close();
 			}
@@ -103,6 +106,8 @@ public class Settings {
 					playerUpdateInterval = Integer.parseInt(s);
 				}else if(line == 2){
 					cubeUpdateInterval = Integer.parseInt(s);
+				}else if(line == 3){
+					s_useWorldUpdateThread = Boolean.parseBoolean(s);
 				}
 			}catch(Exception e){
 				Logger.warn("Error loading settings: " + e.getMessage() + " on line " + line + " at \"" + s + "\".");
@@ -121,6 +126,8 @@ public class Settings {
 					s = playerUpdateInterval + "";
 				}else if (line == 2) {
 					s = cubeUpdateInterval + "";
+				}else if (line == 3) {
+					s = s_useWorldUpdateThread + "";
 				}
 			}catch (Exception e) {
 				Logger.warn("Error saving config: " + e.getMessage() + " on line " + line + " at \"" + s + "\".");
