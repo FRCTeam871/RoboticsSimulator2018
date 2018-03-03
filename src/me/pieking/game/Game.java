@@ -277,32 +277,7 @@ public class Game {
 			if (ClientStarter.clientStarter.getClient().isConnected()) {
 				System.out.println("Connected to the server.");
 //				String username = JOptionPane.showInputDialog(frame, "Enter a username:");
-				int teamNum = Rand.range(1, 8000);
-				String username = "Team " + teamNum;
-				
-				// data can be polled from https://www.thebluealliance.com/api/v3/team/frc####?X-TBA-Auth-Key=****
-				JoinPacket pack = new JoinPacket(username, "1", "1", getVersion(), true);
-				Game.doPacket(pack);
-				Game.getWorld().setSelfPlayer(pack.getCreated());
-				
-				try {
-					System.out.println("Polling TBA for team " + teamNum + " ...");
-					JSONObject json = Utils.getTeamInfo(teamNum);
-					System.out.println("Got response:");
-					System.out.println(json.toString(2));
-					if(!json.has("Errors")) gw.getSelfPlayer().setTeamInfo(json);
-				}catch(Exception e) {
-					e.printStackTrace();
-				}
-				
-				Robot s = gw.getSelfPlayer().selectShip();
-			    
-			    try {
-					ShipDataPacket sdp = new ShipDataPacket(Game.getWorld().getSelfPlayer().name, s.saveDataString());
-					Game.doPacket(sdp);
-				}catch (IOException e1) {
-					e1.printStackTrace();
-				}
+				connectToServer();
 				
 			} else {
 				
@@ -319,6 +294,43 @@ public class Game {
 			}
 		}
 		
+	}
+
+	public static void connectToServer() {
+			
+		List<Player> pl = new ArrayList<Player>();
+		pl.addAll(getWorld().getPlayers());
+		
+		for(Player p : pl) {
+			Game.getWorld().removePlayer(p);
+		}
+		
+		int teamNum = Rand.range(1, 8000);
+		String username = "Team " + teamNum;
+		
+		// data can be polled from https://www.thebluealliance.com/api/v3/team/frc####?X-TBA-Auth-Key=****
+		JoinPacket pack = new JoinPacket(username, "1", "1", getVersion(), true);
+		Game.doPacket(pack);
+		Game.getWorld().setSelfPlayer(pack.getCreated());
+		
+		try {
+			System.out.println("Polling TBA for team " + teamNum + " ...");
+			JSONObject json = Utils.getTeamInfo(teamNum);
+			System.out.println("Got response:");
+			System.out.println(json.toString(2));
+			if(!json.has("Errors")) gw.getSelfPlayer().setTeamInfo(json);
+		}catch(Exception e) {
+			e.printStackTrace();
+		}
+		
+		Robot s = gw.getSelfPlayer().selectShip();
+		
+		try {
+			ShipDataPacket sdp = new ShipDataPacket(Game.getWorld().getSelfPlayer().name, s.saveDataString());
+			Game.doPacket(sdp);
+		}catch (IOException e1) {
+			e1.printStackTrace();
+		}
 	}
 	
 	/**

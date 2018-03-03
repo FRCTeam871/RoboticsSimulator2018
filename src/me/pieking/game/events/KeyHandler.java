@@ -19,6 +19,7 @@ import me.pieking.game.Gameplay.GameState;
 import me.pieking.game.command.Command;
 import me.pieking.game.gfx.Render;
 import me.pieking.game.menu.ServerSettingsMenu;
+import me.pieking.game.net.ClientStarter;
 import me.pieking.game.robot.Robot;
 import me.pieking.game.scripting.LuaScriptLoader;
 import me.pieking.game.world.Balance.Team;
@@ -112,6 +113,8 @@ public class KeyHandler implements KeyListener{
 			if(e.getKeyCode() == KeyEvent.VK_V && Game.gameplay.getState() == GameState.WAITING_FOR_PLAYERS){
 				
 				Game.gameplay.voteToStart(Game.getWorld().getSelfPlayer());
+			}else if(e.getKeyCode() == KeyEvent.VK_R && Game.gameplay.getState() == GameState.WAITING_FOR_PLAYERS && !Game.isConnected() && !Game.isServer()){
+				ClientStarter.clientStarter.reconnect();
 			}
 		}
 		
