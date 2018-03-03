@@ -281,7 +281,7 @@ public class Game {
 				String username = "Team " + teamNum;
 				
 				// data can be polled from https://www.thebluealliance.com/api/v3/team/frc####?X-TBA-Auth-Key=****
-				JoinPacket pack = new JoinPacket(username, "1", "1", getVersion());
+				JoinPacket pack = new JoinPacket(username, "1", "1", getVersion(), true);
 				Game.doPacket(pack);
 				Game.getWorld().setSelfPlayer(pack.getCreated());
 				

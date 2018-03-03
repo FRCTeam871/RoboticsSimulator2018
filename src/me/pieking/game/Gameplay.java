@@ -13,9 +13,12 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.jmr.wrapper.common.Connection;
+
 import me.pieking.game.gfx.Fonts;
 import me.pieking.game.gfx.Render;
 import me.pieking.game.menu.SelectScriptMenu;
+import me.pieking.game.net.ClientStarter;
 import me.pieking.game.net.ServerStarter;
 import me.pieking.game.net.packet.ChoseAutonPacket;
 import me.pieking.game.net.packet.PlayerUpdatePacket;
@@ -256,6 +259,24 @@ public class Gameplay {
     			String msg4 = "Press [S] for settings.";
     			g.drawString(msg4, Game.getWidth()/2 - g.getFontMetrics().stringWidth(msg4)/2, Game.getHeight()/2 + 130);
 			}
+			
+			if(Vars.showCollision) {
+				List<Player> play = new ArrayList<Player>();
+				play.addAll(Game.getWorld().getPlayers());
+				g.setColor(Color.GREEN);
+				g.setFont(Fonts.pixelmix.deriveFont(12f));
+				for(int i = 0; i < play.size(); i++) {
+					Player p = play.get(i);
+					if(p == null) continue;
+					Connection c = null;
+					if(Game.isServer()) {
+						c = ServerStarter.serverStarter.getConnection(p);
+					}
+					String connection = c != null ? Integer.toHexString(c.hashCode()) +"" : "";
+					g.drawString(p.name + " | " + (p.getRobot() != null) + " " + connection, 10, i * 20 + 20);
+				}
+			}
+			
 		}else if(state == GameState.SETUP){
 			g.setColor(new Color(0f, 0f, 0f, 0.5f));
 			g.fillRect(0, 0, Game.getWidth(), Game.getHeight());

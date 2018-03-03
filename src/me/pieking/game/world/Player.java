@@ -146,16 +146,18 @@ public class Player {
 		inventory.put(ComponentBumberCorner.class, 20);
 		
 		if(name.matches("Team \\d+")) {
-			int teamNum = Integer.parseInt(name.substring(5));
-    		try {
-    			System.out.println("Polling TBA for team " + teamNum + " ...");
-    			JSONObject json = Utils.getTeamInfo(teamNum);
-    			System.out.println("Got response:");
-    			System.out.println(json.toString(2));
-    			if(!json.has("Errors")) setTeamInfo(json);
-    		}catch(Exception e) {
-    			e.printStackTrace();
-    		}
+			new Thread(() -> {
+				int teamNum = Integer.parseInt(name.substring(5));
+	    		try {
+	    			System.out.println("Polling TBA for team " + teamNum + " ...");
+	    			JSONObject json = Utils.getTeamInfo(teamNum);
+	    			System.out.println("Got response:");
+	    			System.out.println(json.toString(2));
+	    			if(!json.has("Errors")) setTeamInfo(json);
+	    		}catch(Exception e) {
+	    			e.printStackTrace();
+	    		}
+			}).start(); 
 		}
 		
 //		List<Component> comp = new ArrayList<Component>();
@@ -893,6 +895,9 @@ public class Player {
 	}
 	
 	public void constructShip(){
+		
+		System.out.println("constructShip for " + name);
+		
 		if(bods != null){
 			for(Body b : bods){
 				Game.getWorld().getWorld().removeBody(b);

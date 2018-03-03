@@ -31,7 +31,7 @@ public class WorldUpdateThread extends Thread {
     		}
     		
     		try {
-    			sleep(100);
+    			sleep(5);
     		} catch (InterruptedException e) {}
 		}
 		
