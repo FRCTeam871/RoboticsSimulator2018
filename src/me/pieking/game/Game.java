@@ -185,7 +185,7 @@ public class Game {
 			
 			long now = System.currentTimeMillis();
 			
-			System.out.println(now + " " + lastUpdate + " " + (now - lastUpdate));
+//			System.out.println(now + " " + lastUpdate + " " + (now - lastUpdate));
 			
 			if(now - lastUpdate > 1000) {
 				Logger.warn("Gameloop Thread is hung!");
