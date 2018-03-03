@@ -22,8 +22,10 @@ import me.pieking.game.net.ClientStarter;
 import me.pieking.game.net.ServerStarter;
 import me.pieking.game.net.packet.ChoseAutonPacket;
 import me.pieking.game.net.packet.PlayerUpdatePacket;
+import me.pieking.game.net.packet.RequestRobotPacket;
 import me.pieking.game.net.packet.SetGameTimePacket;
 import me.pieking.game.net.packet.SetStatePacket;
+import me.pieking.game.net.packet.SetTeamPacket;
 import me.pieking.game.net.packet.UpdateScorePacket;
 import me.pieking.game.net.packet.VotePacket;
 import me.pieking.game.robot.Robot;
@@ -93,9 +95,25 @@ public class Gameplay {
 					}
 				}
 				
+				if(Game.getTime() % 20 == 0 && !Game.isServer()) {
+    				List<Player> play = new ArrayList<Player>();
+    				play.addAll(Game.getWorld().getPlayers());
+    				for(Player p : play){
+    					if(p == Game.getWorld().getSelfPlayer()) continue;
+    					if(p.getRobot() == null) {
+    						RequestRobotPacket rrp = new RequestRobotPacket(p.name);
+    						Game.sendPacket(rrp);
+    					}else if(Game.getTime() % 60 == 0){
+    						RequestRobotPacket rrp = new RequestRobotPacket(p.name);
+    						Game.sendPacket(rrp);
+    					}
+    				}
+				}
+				
 				if(numVoted / (double)Game.getWorld().getPlayers().size() >= 0.5){
 					setState(GameState.SETUP);
 				}
+				
 				
 				break;
 			case SETUP:
@@ -272,6 +290,9 @@ public class Gameplay {
 					if(Game.isServer()) {
 						c = ServerStarter.serverStarter.getConnection(p);
 					}
+					
+					g.setColor(p.team.color);
+					
 					String connection = c != null ? Integer.toHexString(c.hashCode()) +"" : "";
 					g.drawString(p.name + " | " + (p.getRobot() != null) + " " + connection, 10, i * 20 + 20);
 				}
@@ -490,6 +511,10 @@ public class Gameplay {
 				bluePlayers.clear();
 				
 				for(Player p : Game.getWorld().getPlayers()){
+					if(Game.isServer()) {
+    					SetTeamPacket stp = new SetTeamPacket(p.name, p.team.toString());
+    					ServerStarter.serverStarter.sendToAll(stp);
+					}
 					if(p.team == Team.RED){
 						redPlayers.add(p);
 					}else if(p.team == Team.BLUE){
@@ -497,14 +522,16 @@ public class Gameplay {
 					}
 				}
 				
-				for(int i = 0; i < Math.min(redPlayers.size(), 3); i++){
-					Player p = redPlayers.get(i);
-					setLocation(p, redSpawns[i], Math.toRadians(90));
-				}
-				
-				for(int i = 0; i < Math.min(bluePlayers.size(), 3); i++){
-					Player p = bluePlayers.get(i);
-					setLocation(p, blueSpawns[i], Math.toRadians(-90));
+				if(Game.isServer()) {
+    				for(int i = 0; i < Math.min(redPlayers.size(), 3); i++){
+    					Player p = redPlayers.get(i);
+    					setLocation(p, redSpawns[i], Math.toRadians(90));
+    				}
+    				
+    				for(int i = 0; i < Math.min(bluePlayers.size(), 3); i++){
+    					Player p = bluePlayers.get(i);
+    					setLocation(p, blueSpawns[i], Math.toRadians(-90));
+    				}
 				}
 				
 				if(!Game.isServer() && !Game.GAMEPLAY_DEBUG) {
