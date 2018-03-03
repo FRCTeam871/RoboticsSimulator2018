@@ -69,6 +69,12 @@ public class KeyHandler implements KeyListener{
 			Game.getWorld().useLevitate(e.isControlDown() ? Team.RED : Team.BLUE);
 		}else if(e.getKeyCode() == KeyEvent.VK_NUMPAD0) {
 			Game.getWorld().resetPowerups();
+		}else if(e.getKeyCode() == KeyEvent.VK_F12) {
+			if(e.isShiftDown()) {
+				Game.debugLag();
+			}else {
+				Game.debugHang();
+			}
 		}
 		
 		if(Game.getWorld().getSelfPlayer() != null){

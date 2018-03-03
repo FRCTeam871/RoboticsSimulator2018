@@ -98,6 +98,13 @@ public class Game {
 	
 	public static List<Packet> packetQueue = new ArrayList<Packet>();
 	
+	private static Thread gameThread;
+	private static long lastUpdate = System.currentTimeMillis();
+	private static Thread monitorThread;
+	
+	private static boolean debugHang = false;
+	private static boolean debugLag = false;
+	
 	/**
 	 * Run the game with arguments
 	 */
@@ -111,7 +118,14 @@ public class Game {
 	 */
 	private static void run(){
 		init();
-		
+		lastUpdate = System.currentTimeMillis();
+		gameThread = new Thread(Game::runGameLoop);
+		gameThread.start();
+		monitorThread = new Thread(Game::monitorThreadLoop);
+		monitorThread.start();
+	}
+
+	private static void runGameLoop() {
 		long last = System.nanoTime();
 		long now = System.nanoTime();
 		
@@ -128,6 +142,7 @@ public class Game {
 		
 		while(running){
 			now = System.nanoTime();
+			lastUpdate = System.currentTimeMillis();
 			
 			long diff = now - last;
 			
@@ -163,7 +178,31 @@ public class Game {
 			
 			
 		}
-		
+	}
+	
+	private static void monitorThreadLoop() {
+		while(true) {
+			
+			long now = System.currentTimeMillis();
+			
+			System.out.println(now + " " + lastUpdate + " " + (now - lastUpdate));
+			
+			if(now - lastUpdate > 1000) {
+				Logger.warn("Gameloop Thread is hung!");
+				lastUpdate = now;
+				
+				gameThread.interrupt();
+				gameThread.stop();
+				gameThread = new Thread(Game::runGameLoop);
+				gameThread.start();
+			}
+			
+			try {
+				Thread.sleep(500);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
 	}
 	
 	/**
@@ -339,6 +378,15 @@ public class Game {
 	 */
 	private static void tick(){
 		
+		if(debugHang) {
+			debugHang = false;
+			while(true) { // purposefully hang the thread
+				try {
+					Thread.sleep(100);
+				} catch (InterruptedException e) {}
+			}
+		}
+		
 		frame.setTitle(NAME + (isServer() ? " (Server) " : "") + " v" + VERSION + " | " + fps + " FPS " + tps + " TPS");
 
 		List<Packet> pack = new ArrayList<Packet>();
@@ -379,6 +427,13 @@ public class Game {
 	 * Tells {@link Render} to render to {@link #disp}
 	 */
 	private static void render(){
+		
+		if(debugLag) {
+			try {
+				Thread.sleep(100);
+			} catch (InterruptedException e) {}
+		}
+		
 		Render.render(disp);
 		disp.paint(disp.getGraphics());
 	}
@@ -624,6 +679,14 @@ public class Game {
 
 	public static void queuePacket(Packet p) {
 		packetQueue.add(p);
+	}
+	
+	public static void debugHang() {
+		debugHang = true;
+	}
+	
+	public static void debugLag() {
+		debugLag = !debugLag;
 	}
 	
 }
