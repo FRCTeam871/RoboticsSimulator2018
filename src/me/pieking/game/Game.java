@@ -57,8 +57,7 @@ public class Game {
 	/** The name of the game. */
 	private static final String NAME = "Robotics Simulator 2018";
 	
-	/** Follows Semantic Versioning as per <a href="// https://semver.org/">semver.org</a>.*/
-	private static final String VERSION = "0.2.0 - playtest"; 
+	private static final String VERSION = "0.2.2"; 
 	
 	/** Whether the game is running or not. */
 	private static boolean running = false;
@@ -187,7 +186,7 @@ public class Game {
 			
 //			System.out.println(now + " " + lastUpdate + " " + (now - lastUpdate));
 			
-			if(now - lastUpdate > 1000) {
+			if(now - lastUpdate > 3000) {
 				Logger.warn("Gameloop Thread is hung!");
 				lastUpdate = now;
 				
@@ -316,6 +315,13 @@ public class Game {
 			if (ClientStarter.clientStarter.getClient().isConnected()) {
 				System.out.println("Connected to the server.");
 //				String username = JOptionPane.showInputDialog(frame, "Enter a username:");
+
+				try {
+					Thread.sleep(500);
+				} catch (InterruptedException e1) {
+					e1.printStackTrace();
+				}
+				
 				connectToServer();
 				
 			} else {
