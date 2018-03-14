@@ -206,7 +206,9 @@ public class Player {
 		if(Math.abs(vel.x - activeLinearX) > 50 || Math.abs(vel.y - activeLinearY) > 50) {
 			System.out.println("GLITCH");
 			doReset = true;
-		}else if(doReset) {
+		}
+		
+		if(doReset) {
 			doReset = false;
 			reconstruct();
 			System.out.println("RESET");
