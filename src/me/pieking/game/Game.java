@@ -57,7 +57,7 @@ public class Game {
 	/** The name of the game. */
 	private static final String NAME = "Robotics Simulator 2018";
 	
-	private static final String VERSION = "0.2.3"; 
+	private static final String VERSION = "0.2.2"; 
 	
 	/** Whether the game is running or not. */
 	private static boolean running = false;
