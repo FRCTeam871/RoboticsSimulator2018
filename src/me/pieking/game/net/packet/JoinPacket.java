@@ -65,4 +65,8 @@ public class JoinPacket extends Packet {
 		return version;
 	}
 	
+	public String getUsername() {
+		return user;
+	}
+	
 }

@@ -110,6 +110,14 @@ public class ServerStarter {
 				return;
 			}
 			
+			for(Player pla : Game.getWorld().getPlayers()) {
+				if(pla.name.equals(jp.getUsername())) {
+					KickPacket kp = new KickPacket("There is already a player with the name \"" + jp.getUsername() + "\".");
+					writePacket(from, kp);
+					return;
+				}
+			}
+			
 			p.doAction();
 			
 			Player pl = jp.getCreated();
