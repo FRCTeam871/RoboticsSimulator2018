@@ -20,7 +20,7 @@ public class ClientStarter {
 	
 	private Client client;
 	
-	private ClientStarter() {
+	private ClientStarter(String[] args) {
 		
 //		new Thread(() -> {
 //			while (true) {
@@ -45,7 +45,14 @@ public class ClientStarter {
 //		}).start();
 		
 		String rawip = "localhost:" + ServerStarter.DEFAULT_PORT;
-		if(!Game.QUICK_CONNECT) rawip = JOptionPane.showInputDialog("Enter an IP: ", "localhost:" + ServerStarter.DEFAULT_PORT);
+		
+		if(args.length > 0) {
+			rawip = args[0];
+		}else {
+			if(!Game.QUICK_CONNECT) rawip = JOptionPane.showInputDialog("Enter an IP: ", "localhost:" + ServerStarter.DEFAULT_PORT);
+		}
+		
+		if(rawip == null) Game.stop(-1);
 		
 		connect(rawip);
 	}
@@ -71,7 +78,7 @@ public class ClientStarter {
 	
 	public static void main(String[] args) {
 		new Thread(() -> {
-			clientStarter = new ClientStarter();
+			clientStarter = new ClientStarter(args);
 		}).start();
 		Game.runGame(args);
 	}

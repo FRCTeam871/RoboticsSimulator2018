@@ -39,9 +39,20 @@ public class ServerStarter {
 
 	public static boolean isServer = false;
 	
-	private ServerStarter() {
+	private ServerStarter(String[] args) {
 		try {
-			server = new Server(DEFAULT_PORT, DEFAULT_PORT);
+			
+			int port = DEFAULT_PORT;
+			
+			if(args.length > 0) {
+				try {
+					port = Integer.parseInt(args[0]);
+				}catch(NumberFormatException e) {
+					e.printStackTrace();
+				}
+			}
+			
+			server = new Server(port, port);
 			server.setListener(new ServerListener(this));
 			if (server.isConnected()) {
 				System.out.println("Started server successfully.");
@@ -57,7 +68,7 @@ public class ServerStarter {
 	public static void main(String[] args) {
 		isServer = true;
 		new Thread(() -> Game.runGame(args)).start();
-		serverStarter = new ServerStarter();
+		serverStarter = new ServerStarter(args);
 	}
 	
 	public Server getServer(){
