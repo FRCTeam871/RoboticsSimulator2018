@@ -1,0 +1,44 @@
+info
+size 6
+key
+null 0
+ClawGrabberComponent 1
+StructureComponentSquare 2
+ThrusterComponent 3
+data
+0
+0
+1 0 32 / 32
+0
+0
+0
+0
+2 0
+2 0
+2 0
+2 0
+0
+0
+2 0
+2 0
+2 0
+2 0
+0
+0
+2 0
+2 0
+2 0
+2 0
+0
+3 90 65 / 65
+2 0
+2 0
+2 0
+2 0
+3 270 68 / 68
+0
+0
+3 0 87 / 87
+3 0 87 / 87
+0
+0
