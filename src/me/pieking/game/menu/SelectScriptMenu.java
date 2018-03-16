@@ -33,6 +33,7 @@ protected List<EToggle> toggles = new ArrayList<EToggle>();
 	Robot robot;
 	
 	private boolean wasLeftPressed = true;
+	private boolean hasSelected = false;
 	
 	public SelectScriptMenu(Robot robot) {
 		super(new Color(0, 0, 0, 0));
@@ -278,6 +279,8 @@ protected List<EToggle> toggles = new ArrayList<EToggle>();
 			
 				close();
 			}
+			
+			hasSelected = true;
 		}
 		
 		wasLeftPressed = nowLeftPressed;
@@ -353,6 +356,10 @@ protected List<EToggle> toggles = new ArrayList<EToggle>();
 		int width = 300;
 		
 		return new Rectangle(0, Game.getHeight() - height, width, height).contains(p);
+	}
+	
+	public boolean hasSelected() {
+		return hasSelected;
 	}
 	
 }

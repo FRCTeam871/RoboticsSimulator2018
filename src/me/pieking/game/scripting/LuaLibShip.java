@@ -16,12 +16,11 @@ import org.luaj.vm2.lib.VarArgFunction;
 import org.luaj.vm2.lib.ZeroArgFunction;
 
 import me.pieking.game.Game;
+import me.pieking.game.Location;
 import me.pieking.game.robot.Robot;
 import me.pieking.game.robot.component.ActivatableComponent;
 import me.pieking.game.robot.component.Component;
 import me.pieking.game.robot.component.ComputerComponent;
-import me.pieking.game.world.TeamProperties;
-import me.pieking.game.world.Balance.Team;
 
 public class LuaLibShip extends TwoArgFunction {
 
@@ -37,6 +36,7 @@ public class LuaLibShip extends TwoArgFunction {
 		library.set("getComponents", new getComponents());
 		library.set("getOrientation", new getOrientation());
 		library.set("mechDrive", new mechDrive());
+		library.set("getPosition", new getPosition());
 		
 		env.set("robot", library);
 		return library;
@@ -112,7 +112,7 @@ public class LuaLibShip extends TwoArgFunction {
 	
 	static class getOrientation extends ZeroArgFunction {
 		public LuaValue call() {
-			double actual = Math.toDegrees(Game.getWorld().getSelfPlayer().getRotation());
+			double actual = Math.toDegrees(Game.getWorld().getSelfPlayer().getRotation()) - 90;
 			return valueOf(actual);
 		}
 	}
@@ -146,12 +146,12 @@ public class LuaLibShip extends TwoArgFunction {
 			theta += Math.toDegrees(Game.getWorld().getPlayer(getRobot()).getRotation());
 			
 			double xa = Math.max(-1, Math.min(x.checkdouble(), 1));
-			xa *= 300;
+			xa *= 1400;
 			double xcx = xa * Math.sin(Math.toRadians(theta));
 			double xcy = -xa * Math.cos(Math.toRadians(theta));
 			
 			double ya = Math.max(-1, Math.min(y.checkdouble(), 1));
-			ya *= 300;
+			ya *= 1400;
 			double ycx = ya * Math.sin(Math.toRadians(90 - theta));
 			double ycy = ya * Math.cos(Math.toRadians(90 - theta));
 			
@@ -161,7 +161,7 @@ public class LuaLibShip extends TwoArgFunction {
 			
 			double rotation = rot.checkdouble();
 			rotation = Math.min(Math.max(-1, rotation), 1d);
-			Game.getWorld().getPlayer(getRobot()).queueTorque(new Torque(400 * rotation));
+			Game.getWorld().getPlayer(getRobot()).queueTorque(new Torque(2400 * rotation));
 			return LuaValue.NIL;
 		}
 	}
@@ -206,5 +206,18 @@ public class LuaLibShip extends TwoArgFunction {
 			
 			return listOf(vals);
 		}
+	}
+	
+	static class getPosition extends ZeroArgFunction {
+
+		@Override
+		public LuaValue call() {
+			Location loc = Game.getWorld().getPlayer(getRobot()).getLocation();
+			LuaTable table = new LuaTable();
+			table.set("x", loc.x);
+			table.set("y", loc.y);
+			return table;
+		}
+		
 	}
 }

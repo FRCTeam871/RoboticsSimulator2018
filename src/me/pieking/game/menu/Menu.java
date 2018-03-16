@@ -112,7 +112,9 @@ public abstract class Menu {
 	}
 	
 	public boolean isFocused(){
-		if(!Render.getMenus().isEmpty()) return this == Render.getMenus().get(Render.getMenus().size()-1);
+		if(!Render.getMenus().isEmpty()) {
+			return this == Render.getMenus().get(Render.getMenus().size()-1);
+		}
 		return false;
 	}
 	

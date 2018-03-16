@@ -160,30 +160,36 @@ public class Gameplay {
 					}
 				}
 				
-				if(gameTime <= 0 || Game.GAMEPLAY_DEBUG){
-					setState(GameState.AUTON);
-				}
+				boolean ready = readyToStart.size() >= Game.getWorld().getPlayers().size();
 				
-//				if(readyToStart.size() < Game.getWorld().getPlayers().size()) {
-//					setGameTime(4 * 60);
-//				}
+				System.out.println(readyToStart);
+				
+				if(Game.isServer()) {
+    				if((gameTime <= 0 && ready) || Game.GAMEPLAY_DEBUG){
+    					setState(GameState.AUTON);
+    				}
+    				
+    				if(!ready) {
+    					setGameTime(4 * 60);
+    				}
+				}
 				
 				break;
 			case AUTON:
 				
-				if(Game.getTime() % 30 == 0) {
-					if(Game.isServer()) {
-	    				for(int i = 0; i < Math.min(redPlayers.size(), 3); i++){
-	    					Player p = redPlayers.get(i);
-	    					setLocation(p, redSpawns[i], Math.toRadians(90));
-	    				}
-	    				
-	    				for(int i = 0; i < Math.min(bluePlayers.size(), 3); i++){
-	    					Player p = bluePlayers.get(i);
-	    					setLocation(p, blueSpawns[i], Math.toRadians(-90));
-	    				}
-					}
-				}
+//				if(Game.getTime() % 30 == 0) {
+//					if(Game.isServer()) {
+//	    				for(int i = 0; i < Math.min(redPlayers.size(), 3); i++){
+//	    					Player p = redPlayers.get(i);
+//	    					setLocation(p, redSpawns[i], Math.toRadians(90));
+//	    				}
+//	    				
+//	    				for(int i = 0; i < Math.min(bluePlayers.size(), 3); i++){
+//	    					Player p = bluePlayers.get(i);
+//	    					setLocation(p, blueSpawns[i], Math.toRadians(-90));
+//	    				}
+//					}
+//				}
 				
 				if(Game.keyHandler().isPressed(KeyEvent.VK_F10)) setState(GameState.TELEOP);
 				if(gameTime <= 0){
@@ -567,6 +573,9 @@ public class Gameplay {
 				resetField();
 				voted.clear();
 				Game.getWorld().setCameraCentered(true);
+				
+				readyToStart.clear();
+				
 				break;
 			case SETUP:
 				resetField();
@@ -601,17 +610,18 @@ public class Gameplay {
     				}
 				}
 				
-				boolean doAuton = false;
+				boolean doAuton = true;
 				if(!Game.isServer() && !Game.GAMEPLAY_DEBUG && doAuton) {
 					Game.getWorld().getSelfPlayer().getRobot().setAutonScript(null);
     				SelectScriptMenu ssm = new SelectScriptMenu(Game.getWorld().getSelfPlayer().getRobot());
     				Render.showMenu(ssm);
     				new Thread(() -> {
-    					while(ssm.isFocused()) {
+    					while(Render.getMenus().contains(ssm) && !ssm.hasSelected()) {
     						try {
     							Thread.sleep(100);
     						} catch (InterruptedException e) {}
     					}
+    					Render.hideAllMenus();
     					readyToStart(Game.getWorld().getSelfPlayer());
     				}).start();
 				}
