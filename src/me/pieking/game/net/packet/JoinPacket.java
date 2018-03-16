@@ -15,11 +15,22 @@ public class JoinPacket extends Packet {
 	Color col;
 	String version;
 	
+	boolean noRobotRequest;
+	
 	public JoinPacket(String username, String x, String y, String version) {
 		this.user = username;
 		this.x = Integer.parseInt(x);
 		this.y = Integer.parseInt(y);
 		this.version = version;
+	}
+	
+	public JoinPacket(String username, String x, String y, String version, boolean noRobotRequest) {
+		this.user = username;
+		this.x = Integer.parseInt(x);
+		this.y = Integer.parseInt(y);
+		this.version = version;
+		
+		this.noRobotRequest = noRobotRequest;
 	}
 
 	@Override
@@ -31,10 +42,17 @@ public class JoinPacket extends Packet {
 	public void doAction() {
 		System.out.println("make2 player " + user);
 		if(Game.getWorld().getPlayer(user) == null){
+			System.out.println("does not exist");
 			Player pl = new Player(user, x, y, Team.RED);
 			System.out.println(pl);
 			Game.getWorld().addPlayer(pl);
 			created = pl;
+			
+			if(!Game.isServer() && !noRobotRequest) {
+				System.out.println("requesting " + created.name);
+    			RequestRobotPacket rrp = new RequestRobotPacket(created.name);
+    			Game.sendPacket(rrp);
+			}
 		}
 		System.out.println("created = " + created);
 	}
@@ -45,6 +63,10 @@ public class JoinPacket extends Packet {
 
 	public String getVersion() {
 		return version;
+	}
+	
+	public String getUsername() {
+		return user;
 	}
 	
 }

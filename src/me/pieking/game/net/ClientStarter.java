@@ -16,10 +16,11 @@ public class ClientStarter {
 	public static ClientStarter clientStarter;
 
 	public static boolean hasEnteredIp = false;
+	public static String enteredIp = null;
 	
-	private final Client client;
+	private Client client;
 	
-	private ClientStarter() {
+	private ClientStarter(String[] args) {
 		
 //		new Thread(() -> {
 //			while (true) {
@@ -44,7 +45,21 @@ public class ClientStarter {
 //		}).start();
 		
 		String rawip = "localhost:" + ServerStarter.DEFAULT_PORT;
-		if(!Game.QUICK_CONNECT) rawip = JOptionPane.showInputDialog("Enter an IP: ", "localhost:" + ServerStarter.DEFAULT_PORT);
+		
+		if(args.length > 0) {
+			rawip = args[0];
+		}else {
+			if(!Game.QUICK_CONNECT) rawip = JOptionPane.showInputDialog("Enter an IP: ", "localhost:" + ServerStarter.DEFAULT_PORT);
+		}
+		
+		if(rawip == null) Game.stop(-1);
+		
+		connect(rawip);
+	}
+
+	public void connect(String rawip) {
+		
+		enteredIp = rawip;
 		
 		String ip = rawip.split(":")[0];
 		int port = Integer.parseInt(rawip.split(":")[1]);
@@ -63,7 +78,7 @@ public class ClientStarter {
 	
 	public static void main(String[] args) {
 		new Thread(() -> {
-			clientStarter = new ClientStarter();
+			clientStarter = new ClientStarter(args);
 		}).start();
 		Game.runGame(args);
 	}
@@ -113,6 +128,17 @@ public class ClientStarter {
 		
 		Game.queuePacket(p);
 		
+	}
+
+	public void reconnect() {
+		System.out.println("reconnect");
+		connect(enteredIp);
+		getClient().connect();
+		
+		System.out.println(client.isConnected());
+		if(client.isConnected()) {
+			Game.connectToServer();
+		}
 	}
 	
 }

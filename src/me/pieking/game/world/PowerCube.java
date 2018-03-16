@@ -38,6 +38,7 @@ public class PowerCube {
 	private List<Player> transitiveControllers = new ArrayList<>();
 
 	public boolean holding = false;
+	public long lastUpdate = System.currentTimeMillis();
 	
 	public PowerCube(double x, double y, double angle) {
 		this(x, y, angle, ID++);
@@ -80,6 +81,12 @@ public class PowerCube {
 	public void tick(){
 		if(Game.getTime() % Settings.cubeUpdateInterval == 0 && Game.isServer()) {
 			sendServerMotion();
+		}
+		
+		if(!Game.isServer() && Game.isConnected()) {
+    		if(System.currentTimeMillis() - lastUpdate > 1000) {
+    			Game.getWorld().removeCube(this);
+    		}
 		}
 	}
 

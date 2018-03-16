@@ -1,9 +1,9 @@
 package me.pieking.game.net;
 
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Optional;
 
 import javax.swing.JOptionPane;
 
@@ -12,20 +12,18 @@ import com.jmr.wrapper.common.exceptions.NNCantStartServer;
 import com.jmr.wrapper.server.Server;
 
 import me.pieking.game.Game;
-import me.pieking.game.Scheduler;
-import me.pieking.game.Settings;
+import me.pieking.game.Logger;
 import me.pieking.game.Logger.ExitState;
+import me.pieking.game.Settings;
 import me.pieking.game.net.packet.JoinPacket;
 import me.pieking.game.net.packet.KickPacket;
 import me.pieking.game.net.packet.LeavePacket;
 import me.pieking.game.net.packet.Packet;
+import me.pieking.game.net.packet.RequestRobotPacket;
 import me.pieking.game.net.packet.SetTeamPacket;
-import me.pieking.game.net.packet.ShipComponentHealthPacket;
-import me.pieking.game.net.packet.ShipDataPacket;
 import me.pieking.game.net.packet.UpdateSettingsPacket;
-import me.pieking.game.robot.component.Component;
-import me.pieking.game.world.Player;
 import me.pieking.game.world.Balance.Team;
+import me.pieking.game.world.Player;
 
 public class ServerStarter {
 
@@ -41,9 +39,20 @@ public class ServerStarter {
 
 	public static boolean isServer = false;
 	
-	private ServerStarter() {
+	private ServerStarter(String[] args) {
 		try {
-			server = new Server(DEFAULT_PORT, DEFAULT_PORT);
+			
+			int port = DEFAULT_PORT;
+			
+			if(args.length > 0) {
+				try {
+					port = Integer.parseInt(args[0]);
+				}catch(NumberFormatException e) {
+					e.printStackTrace();
+				}
+			}
+			
+			server = new Server(port, port);
 			server.setListener(new ServerListener(this));
 			if (server.isConnected()) {
 				System.out.println("Started server successfully.");
@@ -59,7 +68,7 @@ public class ServerStarter {
 	public static void main(String[] args) {
 		isServer = true;
 		new Thread(() -> Game.runGame(args)).start();
-		serverStarter = new ServerStarter();
+		serverStarter = new ServerStarter(args);
 	}
 	
 	public Server getServer(){
@@ -101,6 +110,14 @@ public class ServerStarter {
 				return;
 			}
 			
+			for(Player pla : Game.getWorld().getPlayers()) {
+				if(pla.name.equals(jp.getUsername())) {
+					KickPacket kp = new KickPacket("There is already a player with the name \"" + jp.getUsername() + "\".");
+					writePacket(from, kp);
+					return;
+				}
+			}
+			
 			p.doAction();
 			
 			Player pl = jp.getCreated();
@@ -124,39 +141,43 @@ public class ServerStarter {
 					JoinPacket jp2 = new JoinPacket(pl2.name, pl2.getLocation().getX()+"", pl2.getLocation().getY()+"", Game.getVersion());
 					writePacket(from, jp2);
 					
-					Scheduler.delayedTask(() -> {
-						try{
-    						String decoded = "null";
-    						try {
-    							decoded = new String(pl2.robot.saveData(), "ISO-8859-1");
-    						}catch (UnsupportedEncodingException e) {
-    							e.printStackTrace();
-    						}
-    					    
-    						ShipDataPacket sdp = new ShipDataPacket(pl2.name, decoded);
-    						writePacket(from, sdp);
-    						
-    						SetTeamPacket stp = new SetTeamPacket(pl2.name, pl2.team.toString());
-    						writePacket(from, stp);
-    						
-    						Scheduler.delayedTask(() -> {
-    							for(Component c : pl2.robot.getComponents()){
-        							ShipComponentHealthPacket schp = new ShipComponentHealthPacket(pl2.name, c.bounds.x + "", c.bounds.y + "", c.health + "");
-        							writePacket(from, schp);
-        						}
-    						}, 120);
-    						
-    						
-						}catch(Exception e){
-							e.printStackTrace();
-						} 
-					}, 120);
+//					Scheduler.delayedTask(() -> {
+//						try{
+//    						String decoded = "null";
+//    						try {
+//    							decoded = new String(pl2.robot.saveData(), "ISO-8859-1");
+//    						}catch (UnsupportedEncodingException e) {
+//    							e.printStackTrace();
+//    						}
+//    					    
+//    						ShipDataPacket sdp = new ShipDataPacket(pl2.name, decoded);
+//    						writePacket(from, sdp);
+//    						
+//    						SetTeamPacket stp = new SetTeamPacket(pl2.name, pl2.team.toString());
+//    						writePacket(from, stp);
+//    						
+//    						Scheduler.delayedTask(() -> {
+//    							for(Component c : pl2.robot.getComponents()){
+//        							ShipComponentHealthPacket schp = new ShipComponentHealthPacket(pl2.name, c.bounds.x + "", c.bounds.y + "", c.health + "");
+//        							writePacket(from, schp);
+//        						}
+//    						}, 120);
+//    						
+//    						
+//						}catch(Exception e){
+//							e.printStackTrace();
+//						} 
+//					}, 120);
 					
 				}
 			}
 			
 			//pl.respawn();
 			
+		}else if(p instanceof RequestRobotPacket) {
+			System.out.println("Recieved RequestRobotPacket for " + p.format() + " from " + from);
+			((RequestRobotPacket) p).handleRequest(connections.get(from));
+			return; // don't send this packet to the clients
 		}else if(p instanceof LeavePacket){
 			p.doAction();
 			from.close();
@@ -181,12 +202,34 @@ public class ServerStarter {
 		return version.equals(Game.getVersion());
 	}
 
-	private void writePacket(Connection from, Packet p) {
+	public void writePacket(Connection from, Packet p) {
 		String className = p.getClass().getSimpleName();
 		
 		from.sendTcp(className + "|" + p.format());
 	}
+	
+	public void writePacket(Player client, Packet p) {
+		Connection con = getConnection(client);
+		
+//		System.out.println("Connection for player " + client.name + " ? " + con);
+		
+		if(con != null) {
+    		String className = p.getClass().getSimpleName();
+//    		System.out.println(className + "|" + p.format());
+    		con.sendTcp(className + "|" + p.format());
+		}else {
+			Logger.warn("No Conenction for Player " + client.name);
+		}
+	}
 
+	public Connection getConnection(Player pl) {
+		Optional<Connection> oCon = connections.keySet().stream().filter((c) -> {
+			return connections.get(c) == pl;
+		}).findFirst();
+		
+		return oCon.isPresent() ? oCon.get() : null;
+	}
+	
 	public void sendToAllBut(Connection from, Packet p) {
 		List<Connection> cn = new ArrayList<Connection>();
 		cn.addAll(connections.keySet());

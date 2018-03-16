@@ -57,8 +57,7 @@ public class Game {
 	/** The name of the game. */
 	private static final String NAME = "Robotics Simulator 2018";
 	
-	/** Follows Semantic Versioning as per <a href="// https://semver.org/">semver.org</a>.*/
-	private static final String VERSION = "0.2.0 - playtest"; 
+	private static final String VERSION = "0.2.2"; 
 	
 	/** Whether the game is running or not. */
 	private static boolean running = false;
@@ -94,9 +93,16 @@ public class Game {
 	private static JPanel jp;
 	
 	public static final boolean QUICK_CONNECT = false;
-	public static final boolean GAMEPLAY_DEBUG = true;
+	public static final boolean GAMEPLAY_DEBUG = false;
 	
 	public static List<Packet> packetQueue = new ArrayList<Packet>();
+	
+	private static Thread gameThread;
+	private static long lastUpdate = System.currentTimeMillis();
+	private static Thread monitorThread;
+	
+	private static boolean debugHang = false;
+	private static boolean debugLag = false;
 	
 	/**
 	 * Run the game with arguments
@@ -111,7 +117,14 @@ public class Game {
 	 */
 	private static void run(){
 		init();
-		
+		lastUpdate = System.currentTimeMillis();
+		gameThread = new Thread(Game::runGameLoop);
+		gameThread.start();
+		monitorThread = new Thread(Game::monitorThreadLoop);
+		monitorThread.start();
+	}
+
+	private static void runGameLoop() {
 		long last = System.nanoTime();
 		long now = System.nanoTime();
 		
@@ -128,6 +141,7 @@ public class Game {
 		
 		while(running){
 			now = System.nanoTime();
+			lastUpdate = System.currentTimeMillis();
 			
 			long diff = now - last;
 			
@@ -163,7 +177,31 @@ public class Game {
 			
 			
 		}
-		
+	}
+	
+	private static void monitorThreadLoop() {
+		while(true) {
+			
+			long now = System.currentTimeMillis();
+			
+//			System.out.println(now + " " + lastUpdate + " " + (now - lastUpdate));
+			
+			if(now - lastUpdate > 3000) {
+				Logger.warn("Gameloop Thread is hung!");
+				lastUpdate = now;
+				
+				gameThread.interrupt();
+				gameThread.stop();
+				gameThread = new Thread(Game::runGameLoop);
+				gameThread.start();
+			}
+			
+			try {
+				Thread.sleep(500);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
 	}
 	
 	/**
@@ -277,32 +315,14 @@ public class Game {
 			if (ClientStarter.clientStarter.getClient().isConnected()) {
 				System.out.println("Connected to the server.");
 //				String username = JOptionPane.showInputDialog(frame, "Enter a username:");
-				int teamNum = Rand.range(1, 8000);
-				String username = "Team " + teamNum;
-				
-				// data can be polled from https://www.thebluealliance.com/api/v3/team/frc####?X-TBA-Auth-Key=****
-				JoinPacket pack = new JoinPacket(username, "1", "1", getVersion());
-				Game.doPacket(pack);
-				Game.getWorld().setSelfPlayer(pack.getCreated());
-				
+
 				try {
-					System.out.println("Polling TBA for team " + teamNum + " ...");
-					JSONObject json = Utils.getTeamInfo(teamNum);
-					System.out.println("Got response:");
-					System.out.println(json.toString(2));
-					if(!json.has("Errors")) gw.getSelfPlayer().setTeamInfo(json);
-				}catch(Exception e) {
-					e.printStackTrace();
-				}
-				
-				Robot s = gw.getSelfPlayer().selectShip();
-			    
-			    try {
-					ShipDataPacket sdp = new ShipDataPacket(Game.getWorld().getSelfPlayer().name, s.saveDataString());
-					Game.doPacket(sdp);
-				}catch (IOException e1) {
+					Thread.sleep(500);
+				} catch (InterruptedException e1) {
 					e1.printStackTrace();
 				}
+				
+				connectToServer();
 				
 			} else {
 				
@@ -320,12 +340,58 @@ public class Game {
 		}
 		
 	}
+
+	public static void connectToServer() {
+			
+		List<Player> pl = new ArrayList<Player>();
+		pl.addAll(getWorld().getPlayers());
+		
+		for(Player p : pl) {
+			Game.getWorld().removePlayer(p);
+		}
+		
+		int teamNum = Rand.range(1, 8000);
+		String username = "Team " + teamNum;
+		
+		// data can be polled from https://www.thebluealliance.com/api/v3/team/frc####?X-TBA-Auth-Key=****
+		JoinPacket pack = new JoinPacket(username, "1", "1", getVersion(), true);
+		Game.doPacket(pack);
+		Game.getWorld().setSelfPlayer(pack.getCreated());
+		
+		try {
+			System.out.println("Polling TBA for team " + teamNum + " ...");
+			JSONObject json = Utils.getTeamInfo(teamNum);
+			System.out.println("Got response:");
+			System.out.println(json.toString(2));
+			if(!json.has("Errors")) gw.getSelfPlayer().setTeamInfo(json);
+		}catch(Exception e) {
+			e.printStackTrace();
+		}
+		
+		Robot s = gw.getSelfPlayer().selectShip();
+		
+		try {
+			ShipDataPacket sdp = new ShipDataPacket(Game.getWorld().getSelfPlayer().name, s.saveDataString());
+			Game.doPacket(sdp);
+		}catch (IOException e1) {
+			e1.printStackTrace();
+		}
+	}
 	
 	/**
 	 * Update everything.<br>
 	 * This method expects to be called 60 times per second.
 	 */
 	private static void tick(){
+		
+		if(debugHang) {
+			debugHang = false;
+			while(true) { // purposefully hang the thread
+				try {
+					Thread.sleep(100);
+				} catch (InterruptedException e) {}
+			}
+		}
 		
 		frame.setTitle(NAME + (isServer() ? " (Server) " : "") + " v" + VERSION + " | " + fps + " FPS " + tps + " TPS");
 
@@ -367,6 +433,13 @@ public class Game {
 	 * Tells {@link Render} to render to {@link #disp}
 	 */
 	private static void render(){
+		
+		if(debugLag) {
+			try {
+				Thread.sleep(100);
+			} catch (InterruptedException e) {}
+		}
+		
 		Render.render(disp);
 		disp.paint(disp.getGraphics());
 	}
@@ -612,6 +685,14 @@ public class Game {
 
 	public static void queuePacket(Packet p) {
 		packetQueue.add(p);
+	}
+	
+	public static void debugHang() {
+		debugHang = true;
+	}
+	
+	public static void debugLag() {
+		debugLag = !debugLag;
 	}
 	
 }

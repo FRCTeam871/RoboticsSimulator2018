@@ -13,14 +13,19 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.jmr.wrapper.common.Connection;
+
 import me.pieking.game.gfx.Fonts;
 import me.pieking.game.gfx.Render;
 import me.pieking.game.menu.SelectScriptMenu;
+import me.pieking.game.net.ClientStarter;
 import me.pieking.game.net.ServerStarter;
 import me.pieking.game.net.packet.ChoseAutonPacket;
 import me.pieking.game.net.packet.PlayerUpdatePacket;
+import me.pieking.game.net.packet.RequestRobotPacket;
 import me.pieking.game.net.packet.SetGameTimePacket;
 import me.pieking.game.net.packet.SetStatePacket;
+import me.pieking.game.net.packet.SetTeamPacket;
 import me.pieking.game.net.packet.UpdateScorePacket;
 import me.pieking.game.net.packet.VotePacket;
 import me.pieking.game.robot.Robot;
@@ -75,6 +80,34 @@ public class Gameplay {
 //					setState(GameState.SETUP);
 //				}
 				
+				if(Game.getTime() % 60 == 0) {
+					redPlayers.clear();
+					bluePlayers.clear();
+					for(Player p : Game.getWorld().getPlayers()){
+						if(Game.isServer()) {
+	    					SetTeamPacket stp = new SetTeamPacket(p.name, p.team.toString());
+	    					ServerStarter.serverStarter.sendToAll(stp);
+						}
+						if(p.team == Team.RED){
+							redPlayers.add(p);
+						}else if(p.team == Team.BLUE){
+							bluePlayers.add(p);
+						}
+					}
+					
+					if(Game.isServer()) {
+	    				for(int i = 0; i < Math.min(redPlayers.size(), 3); i++){
+	    					Player p = redPlayers.get(i);
+	    					setLocation(p, redSpawns[i], Math.toRadians(90));
+	    				}
+	    				
+	    				for(int i = 0; i < Math.min(bluePlayers.size(), 3); i++){
+	    					Player p = bluePlayers.get(i);
+	    					setLocation(p, blueSpawns[i], Math.toRadians(-90));
+	    				}
+					}
+				}
+				
 				if(Game.controllerState().aJustPressed) {
 					voteToStart(Game.getWorld().getSelfPlayer());
 				}
@@ -90,22 +123,68 @@ public class Gameplay {
 					}
 				}
 				
+				if(Game.getTime() % 20 == 0 && !Game.isServer()) {
+    				List<Player> play = new ArrayList<Player>();
+    				play.addAll(Game.getWorld().getPlayers());
+    				for(Player p : play){
+    					if(p == Game.getWorld().getSelfPlayer()) continue;
+    					if(p.getRobot() == null) {
+    						RequestRobotPacket rrp = new RequestRobotPacket(p.name);
+    						Game.sendPacket(rrp);
+    					}else if(Game.getTime() % 60 == 0){
+    						RequestRobotPacket rrp = new RequestRobotPacket(p.name);
+    						Game.sendPacket(rrp);
+    					}
+    				}
+				}
+				
 				if(numVoted / (double)Game.getWorld().getPlayers().size() >= 0.5){
 					setState(GameState.SETUP);
 				}
 				
+				
 				break;
 			case SETUP:
+				
+				if(Game.getTime() % 30 == 0) {
+					if(Game.isServer()) {
+	    				for(int i = 0; i < Math.min(redPlayers.size(), 3); i++){
+	    					Player p = redPlayers.get(i);
+	    					setLocation(p, redSpawns[i], Math.toRadians(90));
+	    				}
+	    				
+	    				for(int i = 0; i < Math.min(bluePlayers.size(), 3); i++){
+	    					Player p = bluePlayers.get(i);
+	    					setLocation(p, blueSpawns[i], Math.toRadians(-90));
+	    				}
+					}
+				}
+				
 				if(gameTime <= 0 || Game.GAMEPLAY_DEBUG){
 					setState(GameState.AUTON);
 				}
 				
-				if(readyToStart.size() < Game.getWorld().getPlayers().size()) {
-					setGameTime(2 * 60);
-				}
+//				if(readyToStart.size() < Game.getWorld().getPlayers().size()) {
+//					setGameTime(4 * 60);
+//				}
 				
 				break;
 			case AUTON:
+				
+				if(Game.getTime() % 30 == 0) {
+					if(Game.isServer()) {
+	    				for(int i = 0; i < Math.min(redPlayers.size(), 3); i++){
+	    					Player p = redPlayers.get(i);
+	    					setLocation(p, redSpawns[i], Math.toRadians(90));
+	    				}
+	    				
+	    				for(int i = 0; i < Math.min(bluePlayers.size(), 3); i++){
+	    					Player p = bluePlayers.get(i);
+	    					setLocation(p, blueSpawns[i], Math.toRadians(-90));
+	    				}
+					}
+				}
+				
 				if(Game.keyHandler().isPressed(KeyEvent.VK_F10)) setState(GameState.TELEOP);
 				if(gameTime <= 0){
 					setState(GameState.TELEOP);
@@ -120,6 +199,7 @@ public class Gameplay {
 				}
 				break;
 			case TELEOP:
+				
 				if(Game.keyHandler().isPressed(KeyEvent.VK_F9)) setState(GameState.MATCH_END);
 				if(gameTime <= 0){
 					setState(GameState.MATCH_END);
@@ -251,11 +331,40 @@ public class Gameplay {
 				String msg4 = "" + numVoted + " of " + (int)Math.ceil(Game.getWorld().getPlayers().size() / 2d) + " needed.";
 				g.drawString(msg4, Game.getWidth()/2 - g.getFontMetrics().stringWidth(msg4)/2, Game.getHeight()/2 + 100);
 			}
+
+			if(!Game.isConnected() && !Game.isServer()) {
+				String msg4 = "Press [R] to retry.";
+				g.drawString(msg4, Game.getWidth()/2 - g.getFontMetrics().stringWidth(msg4)/2, Game.getHeight()/2 + 70);
+			}
 			
-			if(!Game.isConnected() || Game.isServer()) {
+			if(Game.isServer()) {
     			String msg4 = "Press [S] for settings.";
     			g.drawString(msg4, Game.getWidth()/2 - g.getFontMetrics().stringWidth(msg4)/2, Game.getHeight()/2 + 130);
+			}else if(!Game.isConnected()) {
+//				String msg4 = "Press [S] for settings.";
+//    			g.drawString(msg4, Game.getWidth()/2 - g.getFontMetrics().stringWidth(msg4)/2, Game.getHeight()/2 + 100);
 			}
+			
+			if(Vars.showCollision) {
+				List<Player> play = new ArrayList<Player>();
+				play.addAll(Game.getWorld().getPlayers());
+				g.setColor(Color.GREEN);
+				g.setFont(Fonts.pixelmix.deriveFont(12f));
+				for(int i = 0; i < play.size(); i++) {
+					Player p = play.get(i);
+					if(p == null) continue;
+					Connection c = null;
+					if(Game.isServer()) {
+						c = ServerStarter.serverStarter.getConnection(p);
+					}
+					
+					g.setColor(p.team.color);
+					
+					String connection = c != null ? Integer.toHexString(c.hashCode()) +"" : "";
+					g.drawString(p.name + " | " + (p.getRobot() != null) + " " + connection, 10, i * 20 + 20);
+				}
+			}
+			
 		}else if(state == GameState.SETUP){
 			g.setColor(new Color(0f, 0f, 0f, 0.5f));
 			g.fillRect(0, 0, Game.getWidth(), Game.getHeight());
@@ -469,6 +578,10 @@ public class Gameplay {
 				bluePlayers.clear();
 				
 				for(Player p : Game.getWorld().getPlayers()){
+					if(Game.isServer()) {
+    					SetTeamPacket stp = new SetTeamPacket(p.name, p.team.toString());
+    					ServerStarter.serverStarter.sendToAll(stp);
+					}
 					if(p.team == Team.RED){
 						redPlayers.add(p);
 					}else if(p.team == Team.BLUE){
@@ -476,17 +589,20 @@ public class Gameplay {
 					}
 				}
 				
-				for(int i = 0; i < Math.min(redPlayers.size(), 3); i++){
-					Player p = redPlayers.get(i);
-					setLocation(p, redSpawns[i], Math.toRadians(90));
+				if(Game.isServer()) {
+    				for(int i = 0; i < Math.min(redPlayers.size(), 3); i++){
+    					Player p = redPlayers.get(i);
+    					setLocation(p, redSpawns[i], Math.toRadians(90));
+    				}
+    				
+    				for(int i = 0; i < Math.min(bluePlayers.size(), 3); i++){
+    					Player p = bluePlayers.get(i);
+    					setLocation(p, blueSpawns[i], Math.toRadians(-90));
+    				}
 				}
 				
-				for(int i = 0; i < Math.min(bluePlayers.size(), 3); i++){
-					Player p = bluePlayers.get(i);
-					setLocation(p, blueSpawns[i], Math.toRadians(-90));
-				}
-				
-				if(!Game.isServer() && !Game.GAMEPLAY_DEBUG) {
+				boolean doAuton = false;
+				if(!Game.isServer() && !Game.GAMEPLAY_DEBUG && doAuton) {
 					Game.getWorld().getSelfPlayer().getRobot().setAutonScript(null);
     				SelectScriptMenu ssm = new SelectScriptMenu(Game.getWorld().getSelfPlayer().getRobot());
     				Render.showMenu(ssm);
@@ -573,9 +689,12 @@ public class Gameplay {
 	}
 	
 	private void setLocation(Player p, Point2D pt, double rot) {
-		p.setLocation(pt, rot);
+//		System.out.println("setLocation(" + p.name + ", " + pt.toString() + ", " + rot + ")");
+//		p.setLocation(pt, rot);
 		if(Game.isServer()) {
-			PlayerUpdatePacket pup = p.createUpdatePacket();
+//			PlayerUpdatePacket pup = p.createUpdatePacket();
+			PlayerUpdatePacket pup = new PlayerUpdatePacket(p.name, pt.getX() + "", pt.getY() + "", "0", "0", rot + "", "0", "0", "false");
+			pup.doAction();
 			ServerStarter.serverStarter.sendToAll(pup);
 		}
 	}
