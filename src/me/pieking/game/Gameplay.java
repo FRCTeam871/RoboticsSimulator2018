@@ -80,6 +80,34 @@ public class Gameplay {
 //					setState(GameState.SETUP);
 //				}
 				
+				if(Game.getTime() % 60 == 0) {
+					redPlayers.clear();
+					bluePlayers.clear();
+					for(Player p : Game.getWorld().getPlayers()){
+						if(Game.isServer()) {
+	    					SetTeamPacket stp = new SetTeamPacket(p.name, p.team.toString());
+	    					ServerStarter.serverStarter.sendToAll(stp);
+						}
+						if(p.team == Team.RED){
+							redPlayers.add(p);
+						}else if(p.team == Team.BLUE){
+							bluePlayers.add(p);
+						}
+					}
+					
+					if(Game.isServer()) {
+	    				for(int i = 0; i < Math.min(redPlayers.size(), 3); i++){
+	    					Player p = redPlayers.get(i);
+	    					setLocation(p, redSpawns[i], Math.toRadians(90));
+	    				}
+	    				
+	    				for(int i = 0; i < Math.min(bluePlayers.size(), 3); i++){
+	    					Player p = bluePlayers.get(i);
+	    					setLocation(p, blueSpawns[i], Math.toRadians(-90));
+	    				}
+					}
+				}
+				
 				if(Game.controllerState().aJustPressed) {
 					voteToStart(Game.getWorld().getSelfPlayer());
 				}
@@ -117,16 +145,46 @@ public class Gameplay {
 				
 				break;
 			case SETUP:
+				
+				if(Game.getTime() % 30 == 0) {
+					if(Game.isServer()) {
+	    				for(int i = 0; i < Math.min(redPlayers.size(), 3); i++){
+	    					Player p = redPlayers.get(i);
+	    					setLocation(p, redSpawns[i], Math.toRadians(90));
+	    				}
+	    				
+	    				for(int i = 0; i < Math.min(bluePlayers.size(), 3); i++){
+	    					Player p = bluePlayers.get(i);
+	    					setLocation(p, blueSpawns[i], Math.toRadians(-90));
+	    				}
+					}
+				}
+				
 				if(gameTime <= 0 || Game.GAMEPLAY_DEBUG){
 					setState(GameState.AUTON);
 				}
 				
-				if(readyToStart.size() < Game.getWorld().getPlayers().size()) {
-					setGameTime(2 * 60);
-				}
+//				if(readyToStart.size() < Game.getWorld().getPlayers().size()) {
+//					setGameTime(4 * 60);
+//				}
 				
 				break;
 			case AUTON:
+				
+				if(Game.getTime() % 30 == 0) {
+					if(Game.isServer()) {
+	    				for(int i = 0; i < Math.min(redPlayers.size(), 3); i++){
+	    					Player p = redPlayers.get(i);
+	    					setLocation(p, redSpawns[i], Math.toRadians(90));
+	    				}
+	    				
+	    				for(int i = 0; i < Math.min(bluePlayers.size(), 3); i++){
+	    					Player p = bluePlayers.get(i);
+	    					setLocation(p, blueSpawns[i], Math.toRadians(-90));
+	    				}
+					}
+				}
+				
 				if(Game.keyHandler().isPressed(KeyEvent.VK_F10)) setState(GameState.TELEOP);
 				if(gameTime <= 0){
 					setState(GameState.TELEOP);
@@ -141,6 +199,7 @@ public class Gameplay {
 				}
 				break;
 			case TELEOP:
+				
 				if(Game.keyHandler().isPressed(KeyEvent.VK_F9)) setState(GameState.MATCH_END);
 				if(gameTime <= 0){
 					setState(GameState.MATCH_END);
@@ -542,7 +601,8 @@ public class Gameplay {
     				}
 				}
 				
-				if(!Game.isServer() && !Game.GAMEPLAY_DEBUG) {
+				boolean doAuton = false;
+				if(!Game.isServer() && !Game.GAMEPLAY_DEBUG && doAuton) {
 					Game.getWorld().getSelfPlayer().getRobot().setAutonScript(null);
     				SelectScriptMenu ssm = new SelectScriptMenu(Game.getWorld().getSelfPlayer().getRobot());
     				Render.showMenu(ssm);
@@ -629,9 +689,12 @@ public class Gameplay {
 	}
 	
 	private void setLocation(Player p, Point2D pt, double rot) {
-		p.setLocation(pt, rot);
+//		System.out.println("setLocation(" + p.name + ", " + pt.toString() + ", " + rot + ")");
+//		p.setLocation(pt, rot);
 		if(Game.isServer()) {
-			PlayerUpdatePacket pup = p.createUpdatePacket();
+//			PlayerUpdatePacket pup = p.createUpdatePacket();
+			PlayerUpdatePacket pup = new PlayerUpdatePacket(p.name, pt.getX() + "", pt.getY() + "", "0", "0", rot + "", "0", "0", "false");
+			pup.doAction();
 			ServerStarter.serverStarter.sendToAll(pup);
 		}
 	}

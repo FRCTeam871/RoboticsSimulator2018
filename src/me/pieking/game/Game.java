@@ -93,7 +93,7 @@ public class Game {
 	private static JPanel jp;
 	
 	public static final boolean QUICK_CONNECT = false;
-	public static final boolean GAMEPLAY_DEBUG = true;
+	public static final boolean GAMEPLAY_DEBUG = false;
 	
 	public static List<Packet> packetQueue = new ArrayList<Packet>();
 	

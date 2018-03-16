@@ -39,9 +39,20 @@ public class ServerStarter {
 
 	public static boolean isServer = false;
 	
-	private ServerStarter() {
+	private ServerStarter(String[] args) {
 		try {
-			server = new Server(DEFAULT_PORT, DEFAULT_PORT);
+			
+			int port = DEFAULT_PORT;
+			
+			if(args.length > 0) {
+				try {
+					port = Integer.parseInt(args[0]);
+				}catch(NumberFormatException e) {
+					e.printStackTrace();
+				}
+			}
+			
+			server = new Server(port, port);
 			server.setListener(new ServerListener(this));
 			if (server.isConnected()) {
 				System.out.println("Started server successfully.");
@@ -57,7 +68,7 @@ public class ServerStarter {
 	public static void main(String[] args) {
 		isServer = true;
 		new Thread(() -> Game.runGame(args)).start();
-		serverStarter = new ServerStarter();
+		serverStarter = new ServerStarter(args);
 	}
 	
 	public Server getServer(){
@@ -97,6 +108,14 @@ public class ServerStarter {
 				KickPacket kp = new KickPacket("Incorrect version. The server requires \"" + Game.getVersion() + "\" but you have \"" + jp.getVersion() + "\".");
 				writePacket(from, kp);
 				return;
+			}
+			
+			for(Player pla : Game.getWorld().getPlayers()) {
+				if(pla.name.equals(jp.getUsername())) {
+					KickPacket kp = new KickPacket("There is already a player with the name \"" + jp.getUsername() + "\".");
+					writePacket(from, kp);
+					return;
+				}
 			}
 			
 			p.doAction();

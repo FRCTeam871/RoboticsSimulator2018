@@ -64,7 +64,7 @@ public class Vault {
 		
 		ControllerState cont = Game.controllerState();
 		
-		if((nowMousePressed && !wasMousePressed && pickupCube.contains(Game.mouseLoc())) || (cont.startJustPressed) && numCubes > 0) {
+		if(((nowMousePressed && !wasMousePressed && pickupCube.contains(Game.mouseLoc())) || (cont.startJustPressed)) && numCubes > 0) {
 			draggingCube = true;
 			prop.setCubeStorage(prop.getCubeStorage() - 1);
 			UpdateCubeStoragePacket ucsp = new UpdateCubeStoragePacket(Game.getWorld().getProperties(Team.RED).getCubeStorage() + "", Game.getWorld().getProperties(Team.BLUE).getCubeStorage() + "");
