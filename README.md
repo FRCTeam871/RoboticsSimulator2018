@@ -5,6 +5,8 @@ Although I participate in FRC, I am not personally affiliated with FRC, nor has 
 
 FIRST®, the FIRST® logo, FIRST® Robotics Competition and FIRST POWER UP℠ are trademarks of For Inspiration and Recognition of Science and Technology (FIRST®). © 2017-2018 FIRST.
 
+## You can download compiled versions [here](https://github.com/FRCTeam871/RoboticsSimulator2018/releases).
+
 ## Dependencies
 Currently for this project, dependencies are handled manually by putting jars in the build path. I'll probably start using Gradle at some point.<br>
 
